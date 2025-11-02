@@ -388,6 +388,48 @@ export class JiraClient {
   }
 
   /**
+   * Add a comment to an issue
+   *
+   * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
+   * @param commentText - The comment text to add
+   * @returns Promise with created JiraComment object
+   * @throws JiraNotFoundError if the issue doesn't exist
+   * @throws JiraAuthenticationError if authentication fails
+   * @throws JiraAPIError if comment creation fails
+   */
+  async addComment(issueKey: string, commentText: string): Promise<JiraComment> {
+    // Validate required fields
+    if (!commentText || commentText.trim().length === 0) {
+      throw new JiraAPIError('Comment text is required', 400);
+    }
+
+    // Build the request payload with ADF format
+    const payload = {
+      body: this.convertTextToADF(commentText)
+    };
+
+    try {
+      const response = await this.request<JiraComment>(
+        'POST',
+        `/issue/${issueKey}/comment`,
+        payload
+      );
+      return response;
+    } catch (error) {
+      if (error instanceof JiraAPIError) {
+        if (error.statusCode === 404) {
+          throw new JiraNotFoundError(`Issue '${issueKey}' not found. Please verify the issue key.`);
+        } else if (error.statusCode === 401) {
+          throw new JiraAuthenticationError('Authentication failed while adding comment. Please verify your credentials.');
+        } else if (error.statusCode === 400) {
+          throw new JiraAPIError(`Failed to add comment: ${error.message}`, 400, error.response);
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Convert plain text to Atlassian Document Format (ADF)
    *
    * @param text - Plain text to convert
