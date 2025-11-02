@@ -219,6 +219,143 @@ export class JiraClient {
       throw error;
     }
   }
+
+  /**
+   * Create a new Jira issue
+   *
+   * @param issueData - Issue creation data
+   * @returns Promise with created issue details
+   * @throws JiraAPIError if creation fails
+   * @throws JiraAuthenticationError if authentication fails
+   */
+  async createIssue(issueData: CreateIssueRequest): Promise<JiraIssue> {
+    // Validate required fields
+    if (!issueData.projectKey) {
+      throw new JiraAPIError('Project key is required', 400);
+    }
+    if (!issueData.summary) {
+      throw new JiraAPIError('Summary is required', 400);
+    }
+    if (!issueData.issueType) {
+      throw new JiraAPIError('Issue type is required', 400);
+    }
+
+    // Build the request payload
+    const payload: any = {
+      fields: {
+        project: { key: issueData.projectKey },
+        summary: issueData.summary,
+        issuetype: { name: issueData.issueType }
+      }
+    };
+
+    // Add description if provided (convert to ADF format)
+    if (issueData.description) {
+      payload.fields.description = this.convertTextToADF(issueData.description);
+    }
+
+    // Add priority if provided
+    if (issueData.priority) {
+      payload.fields.priority = { name: issueData.priority };
+    }
+
+    // Add assignee if provided
+    if (issueData.assignee) {
+      payload.fields.assignee = { accountId: issueData.assignee };
+    }
+
+    // Add reporter if provided
+    if (issueData.reporter) {
+      payload.fields.reporter = { accountId: issueData.reporter };
+    }
+
+    // Add labels if provided
+    if (issueData.labels && issueData.labels.length > 0) {
+      payload.fields.labels = issueData.labels;
+    }
+
+    // Add parent if this is a subtask
+    if (issueData.parentKey) {
+      payload.fields.parent = { key: issueData.parentKey };
+    }
+
+    // Add any custom fields
+    if (issueData.customFields) {
+      Object.assign(payload.fields, issueData.customFields);
+    }
+
+    try {
+      // Create the issue
+      const response = await this.request<CreateIssueResponse>(
+        'POST',
+        '/issue',
+        payload
+      );
+
+      // Fetch and return the full issue details
+      return await this.getIssueDetails(response.key);
+    } catch (error) {
+      if (error instanceof JiraAPIError) {
+        if (error.statusCode === 401) {
+          throw new JiraAuthenticationError('Authentication failed while creating issue. Please verify your credentials.');
+        } else if (error.statusCode === 400) {
+          // Extract field validation errors if available
+          const fieldErrors = error.response?.errors;
+          if (fieldErrors) {
+            const errorMessages = Object.entries(fieldErrors)
+              .map(([field, message]) => `${field}: ${message}`)
+              .join(', ');
+            throw new JiraAPIError(`Field validation failed: ${errorMessages}`, 400, error.response);
+          }
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Convert plain text to Atlassian Document Format (ADF)
+   *
+   * @param text - Plain text to convert
+   * @returns ADF object
+   */
+  private convertTextToADF(text: string): any {
+    // Split text into paragraphs (by double newlines or single newlines)
+    const paragraphs = text.split(/\n\n+/).filter(p => p.trim().length > 0);
+
+    const content = paragraphs.map(paragraph => {
+      // Handle single newlines within a paragraph as separate text nodes
+      const lines = paragraph.split('\n').filter(l => l.trim().length > 0);
+
+      if (lines.length === 0) {
+        return {
+          type: 'paragraph',
+          content: [{ type: 'text', text: ' ' }]
+        };
+      }
+
+      // Create content with hard breaks between lines
+      const lineContent: any[] = [];
+      lines.forEach((line, index) => {
+        lineContent.push({ type: 'text', text: line });
+        // Add hard break between lines (but not after the last line)
+        if (index < lines.length - 1) {
+          lineContent.push({ type: 'hardBreak' });
+        }
+      });
+
+      return {
+        type: 'paragraph',
+        content: lineContent
+      };
+    });
+
+    return {
+      type: 'doc',
+      version: 1,
+      content
+    };
+  }
 }
 
 /**
