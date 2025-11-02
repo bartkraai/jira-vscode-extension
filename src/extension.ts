@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { AuthManager } from './api/AuthManager';
 import { registerAuthenticateCommand, registerClearCredentialsCommand } from './commands/authenticate';
+import { registerCacheClearCommand, registerCacheStatsCommand } from './commands/cache';
 
 /**
  * Global extension context - accessible to all modules
@@ -39,6 +40,10 @@ export function activate(context: vscode.ExtensionContext) {
 	// Register authentication commands
 	context.subscriptions.push(registerAuthenticateCommand(context, authManager));
 	context.subscriptions.push(registerClearCredentialsCommand(context, authManager));
+
+	// Register cache commands (no JiraClient yet, will show helpful message)
+	context.subscriptions.push(registerCacheClearCommand(context));
+	context.subscriptions.push(registerCacheStatsCommand(context));
 
 	// Register the configure command (placeholder for future feature)
 	const configureCommand = vscode.commands.registerCommand('jira.configure', async () => {

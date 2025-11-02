@@ -11,6 +11,7 @@ import {
   JiraComment,
   JiraCreateMetadata
 } from '../models/jira';
+import { CacheManager, CacheTTL } from './CacheManager';
 
 /**
  * Jira API Client
@@ -23,6 +24,7 @@ import {
 export class JiraClient {
   private baseUrl: string;
   private httpClient: AxiosInstance;
+  private cache: CacheManager;
 
   /**
    * Creates a new JiraClient instance
@@ -30,13 +32,17 @@ export class JiraClient {
    * @param instanceUrl - The Jira instance URL (e.g., https://company.atlassian.net)
    * @param email - User's email address
    * @param apiToken - Jira API token from https://id.atlassian.com/manage-profile/security/api-tokens
+   * @param cacheManager - Optional CacheManager instance (creates new one if not provided)
    */
-  constructor(instanceUrl: string, email: string, apiToken: string) {
+  constructor(instanceUrl: string, email: string, apiToken: string, cacheManager?: CacheManager) {
     // Ensure instanceUrl doesn't have trailing slash
     this.baseUrl = `${instanceUrl.replace(/\/$/, '')}/rest/api/2`;
 
     // Create Base64 encoded auth string
     const authString = Buffer.from(`${email}:${apiToken}`).toString('base64');
+
+    // Initialize cache manager
+    this.cache = cacheManager || new CacheManager();
 
     // Configure HTTP client
     this.httpClient = axios.create({
@@ -212,6 +218,15 @@ export class JiraClient {
   }
 
   /**
+   * Get the cache manager instance
+   *
+   * @returns CacheManager instance
+   */
+  getCache(): CacheManager {
+    return this.cache;
+  }
+
+  /**
    * Test connection to Jira
    *
    * @returns Promise that resolves if connection is successful
@@ -244,13 +259,28 @@ export class JiraClient {
    * @param options.maxResults - Maximum number of issues to return (default: 100)
    * @param options.startAt - Starting index for pagination (default: 0)
    * @param options.fields - Array of field names to include (default: all common fields)
+   * @param options.useCache - Whether to use cached results (default: true)
    * @returns Promise with array of JiraIssue objects
    */
   async getAssignedIssues(options?: {
     maxResults?: number;
     startAt?: number;
     fields?: string[];
+    useCache?: boolean;
   }): Promise<JiraIssue[]> {
+    const useCache = options?.useCache !== false;
+
+    // Generate cache key based on parameters
+    const cacheKey = `assignedIssues:${options?.maxResults || 100}:${options?.startAt || 0}`;
+
+    // Check cache first
+    if (useCache) {
+      const cached = this.cache.get<JiraIssue[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const jql = 'assignee = currentUser() ORDER BY updated DESC';
 
     const defaultFields = [
@@ -277,6 +307,10 @@ export class JiraClient {
 
     try {
       const response = await this.request<JiraSearchResponse>('GET', '/search', params);
+
+      // Cache the results
+      this.cache.set(cacheKey, response.issues, CacheTTL.ASSIGNED_ISSUES);
+
       return response.issues;
     } catch (error) {
       if (error instanceof JiraAPIError && error.statusCode === 401) {
@@ -290,11 +324,22 @@ export class JiraClient {
    * Fetch full details of a specific issue
    *
    * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
+   * @param useCache - Whether to use cached results (default: true)
    * @returns Promise with detailed JiraIssueDetails object
    * @throws JiraNotFoundError if the issue doesn't exist
    * @throws JiraAuthenticationError if authentication fails
    */
-  async getIssueDetails(issueKey: string): Promise<JiraIssueDetails> {
+  async getIssueDetails(issueKey: string, useCache: boolean = true): Promise<JiraIssueDetails> {
+    const cacheKey = `issueDetails:${issueKey}`;
+
+    // Check cache first
+    if (useCache) {
+      const cached = this.cache.get<JiraIssueDetails>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const params = {
       fields: '*all',
       expand: 'renderedFields,names,schema,transitions,changelog,comments'
@@ -306,6 +351,10 @@ export class JiraClient {
         `/issue/${issueKey}`,
         params
       );
+
+      // Cache the results
+      this.cache.set(cacheKey, response, CacheTTL.ISSUE_DETAILS);
+
       return response;
     } catch (error) {
       if (error instanceof JiraAPIError) {
@@ -391,8 +440,11 @@ export class JiraClient {
         payload
       );
 
+      // Invalidate assigned issues cache since a new issue was created
+      this.cache.invalidate('assignedIssues:*');
+
       // Fetch and return the full issue details
-      return await this.getIssueDetails(response.key);
+      return await this.getIssueDetails(response.key, false); // Don't use cache for newly created issue
     } catch (error) {
       if (error instanceof JiraAPIError) {
         if (error.statusCode === 401) {
@@ -416,16 +468,31 @@ export class JiraClient {
    * Get available transitions (status changes) for an issue
    *
    * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
+   * @param useCache - Whether to use cached results (default: true)
    * @returns Promise with array of available JiraTransition objects
    * @throws JiraNotFoundError if the issue doesn't exist
    * @throws JiraAuthenticationError if authentication fails
    */
-  async getAvailableTransitions(issueKey: string): Promise<JiraTransition[]> {
+  async getAvailableTransitions(issueKey: string, useCache: boolean = true): Promise<JiraTransition[]> {
+    const cacheKey = `transitions:${issueKey}`;
+
+    // Check cache first
+    if (useCache) {
+      const cached = this.cache.get<JiraTransition[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     try {
       const response = await this.request<{ transitions: JiraTransition[] }>(
         'GET',
         `/issue/${issueKey}/transitions`
       );
+
+      // Cache the results
+      this.cache.set(cacheKey, response.transitions, CacheTTL.TRANSITIONS);
+
       return response.transitions;
     } catch (error) {
       if (error instanceof JiraAPIError) {
@@ -472,6 +539,11 @@ export class JiraClient {
 
     try {
       await this.request('POST', `/issue/${issueKey}/transitions`, payload);
+
+      // Invalidate caches for this issue since it changed
+      this.cache.invalidate(`issueDetails:${issueKey}`);
+      this.cache.invalidate(`transitions:${issueKey}`);
+      this.cache.invalidate('assignedIssues:*'); // Status changed, so list view may need update
     } catch (error) {
       if (error instanceof JiraAPIError) {
         if (error.statusCode === 404) {
@@ -513,6 +585,10 @@ export class JiraClient {
         `/issue/${issueKey}/comment`,
         payload
       );
+
+      // Invalidate issue details cache since a comment was added
+      this.cache.invalidate(`issueDetails:${issueKey}`);
+
       return response;
     } catch (error) {
       if (error instanceof JiraAPIError) {
@@ -531,12 +607,27 @@ export class JiraClient {
   /**
    * Fetch all accessible projects for the current user
    *
+   * @param useCache - Whether to use cached results (default: true)
    * @returns Promise with array of JiraProject objects
    * @throws JiraAuthenticationError if authentication fails
    */
-  async getProjects(): Promise<JiraProject[]> {
+  async getProjects(useCache: boolean = true): Promise<JiraProject[]> {
+    const cacheKey = 'projects';
+
+    // Check cache first
+    if (useCache) {
+      const cached = this.cache.get<JiraProject[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     try {
       const response = await this.request<JiraProject[]>('GET', '/project');
+
+      // Cache the results
+      this.cache.set(cacheKey, response, CacheTTL.PROJECTS);
+
       return response;
     } catch (error) {
       if (error instanceof JiraAPIError && error.statusCode === 401) {
@@ -550,16 +641,31 @@ export class JiraClient {
    * Fetch issue types for a specific project
    *
    * @param projectKey - The project key (e.g., 'PROJ')
+   * @param useCache - Whether to use cached results (default: true)
    * @returns Promise with array of JiraIssueType objects
    * @throws JiraNotFoundError if the project doesn't exist
    * @throws JiraAuthenticationError if authentication fails
    */
-  async getIssueTypes(projectKey: string): Promise<JiraIssueType[]> {
+  async getIssueTypes(projectKey: string, useCache: boolean = true): Promise<JiraIssueType[]> {
+    const cacheKey = `issueTypes:${projectKey}`;
+
+    // Check cache first
+    if (useCache) {
+      const cached = this.cache.get<JiraIssueType[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     try {
       const response = await this.request<{ issueTypes: JiraIssueType[] }>(
         'GET',
         `/project/${projectKey}`
       );
+
+      // Cache the results
+      this.cache.set(cacheKey, response.issueTypes, CacheTTL.ISSUE_TYPES);
+
       return response.issueTypes;
     } catch (error) {
       if (error instanceof JiraAPIError) {
@@ -581,11 +687,22 @@ export class JiraClient {
    *
    * @param projectKey - The project key (e.g., 'PROJ')
    * @param issueType - The issue type name (e.g., 'Bug', 'Story')
+   * @param useCache - Whether to use cached results (default: true)
    * @returns Promise with JiraCreateMetadata object
    * @throws JiraNotFoundError if the project or issue type doesn't exist
    * @throws JiraAuthenticationError if authentication fails
    */
-  async getCreateMetadata(projectKey: string, issueType: string): Promise<JiraCreateMetadata> {
+  async getCreateMetadata(projectKey: string, issueType: string, useCache: boolean = true): Promise<JiraCreateMetadata> {
+    const cacheKey = `createMetadata:${projectKey}:${issueType}`;
+
+    // Check cache first
+    if (useCache) {
+      const cached = this.cache.get<JiraCreateMetadata>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     try {
       const response = await this.request<JiraCreateMetadata>(
         'GET',
@@ -596,6 +713,10 @@ export class JiraClient {
           expand: 'projects.issuetypes.fields'
         }
       );
+
+      // Cache the results
+      this.cache.set(cacheKey, response, CacheTTL.CREATE_METADATA);
+
       return response;
     } catch (error) {
       if (error instanceof JiraAPIError) {

@@ -29,6 +29,14 @@
       {
         "command": "jira.clearCredentials",
         "title": "Jira: Clear Credentials"
+      },
+      {
+        "command": "jira.clearCache",
+        "title": "Jira: Clear Cache"
+      },
+      {
+        "command": "jira.cacheStats",
+        "title": "Jira: View Cache Statistics"
       }
     ]
   },
