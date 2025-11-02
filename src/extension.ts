@@ -3,10 +3,12 @@ import { AuthManager } from './api/AuthManager';
 import { ConfigManager } from './config/ConfigManager';
 import { ConfigValidator } from './config/ConfigValidator';
 import { ConfigChangeHandler } from './config/ConfigChangeHandler';
+import { JiraTreeProvider } from './providers/JiraTreeProvider';
 import { registerAuthenticateCommand, registerClearCredentialsCommand } from './commands/authenticate';
 import { registerCacheClearCommand, registerCacheStatsCommand } from './commands/cache';
 import { registerConfigureCommand } from './commands/configure';
 import { registerValidateCommand } from './commands/validate';
+import { registerRefreshCommand, registerOpenInBrowserCommand } from './commands/treeView';
 
 /**
  * Global extension context - accessible to all modules
@@ -45,6 +47,14 @@ export function activate(context: vscode.ExtensionContext) {
 	const configValidator = new ConfigValidator(configManager, authManager);
 	const configChangeHandler = new ConfigChangeHandler(configManager, authManager, outputChannel);
 
+	// Initialize Tree View Provider
+	const treeProvider = new JiraTreeProvider(authManager, configManager);
+	const treeView = vscode.window.createTreeView('jiraMyWork', {
+		treeDataProvider: treeProvider,
+		showCollapseAll: true
+	});
+	context.subscriptions.push(treeView);
+
 	// Register authentication commands
 	context.subscriptions.push(registerAuthenticateCommand(context, authManager));
 	context.subscriptions.push(registerClearCredentialsCommand(context, authManager));
@@ -55,13 +65,15 @@ export function activate(context: vscode.ExtensionContext) {
 	// Register validation command
 	context.subscriptions.push(registerValidateCommand(context, configValidator, outputChannel));
 
-	// Register cache commands (no JiraClient yet, will show helpful message)
+	// Register cache commands
 	context.subscriptions.push(registerCacheClearCommand(context));
 	context.subscriptions.push(registerCacheStatsCommand(context));
 
+	// Register tree view commands
+	context.subscriptions.push(registerRefreshCommand(context, treeProvider));
+	context.subscriptions.push(registerOpenInBrowserCommand(context, configManager));
+
 	// Register configuration change handler
-	// Note: The handler will be fully utilized once tree views and JiraClient are implemented
-	// For now, it logs changes and prepares for future integration
 	context.subscriptions.push(configChangeHandler);
 	context.subscriptions.push(outputChannel);
 
