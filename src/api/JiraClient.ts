@@ -56,15 +56,24 @@ export class JiraClient {
         if (error.response) {
           // The request was made and the server responded with a status code
           // that falls out of the range of 2xx
+          const statusCode = error.response.status;
           const message = error.response.data?.errorMessages?.[0] ||
                          error.response.data?.message ||
                          error.message;
 
-          throw new JiraAPIError(
-            message,
-            error.response.status,
-            error.response.data
-          );
+          // Handle specific status codes with custom error types
+          switch (statusCode) {
+            case 401:
+              throw new JiraAuthenticationError(message);
+            case 403:
+              throw new JiraPermissionError(message);
+            case 404:
+              throw new JiraNotFoundError(message);
+            case 429:
+              throw new JiraRateLimitError(message);
+            default:
+              throw new JiraAPIError(message, statusCode, error.response.data);
+          }
         } else if (error.request) {
           // The request was made but no response was received
           throw new JiraAPIError(
@@ -80,7 +89,94 @@ export class JiraClient {
   }
 
   /**
-   * Generic request method
+   * Determine if an error is retryable
+   *
+   * @param error - The error to check
+   * @returns true if the error is retryable, false otherwise
+   */
+  private isRetryable(error: any): boolean {
+    // Retry on rate limit errors (429)
+    if (error instanceof JiraRateLimitError) {
+      return true;
+    }
+
+    // Retry on server errors (500, 502, 503)
+    if (error instanceof JiraAPIError) {
+      const retryableStatusCodes = [500, 502, 503];
+      return retryableStatusCodes.includes(error.statusCode);
+    }
+
+    // Retry on network errors (no response)
+    if (error instanceof JiraAPIError && error.statusCode === 0) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Delay execution for a specified number of milliseconds
+   *
+   * @param ms - Milliseconds to delay
+   * @returns Promise that resolves after the delay
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Retry a request with exponential backoff
+   *
+   * @param fn - The function to retry
+   * @param maxRetries - Maximum number of retry attempts (default: 3)
+   * @returns Promise with the result of the function
+   * @throws The last error if all retries fail
+   */
+  private async retryRequest<T>(
+    fn: () => Promise<T>,
+    maxRetries: number = 3
+  ): Promise<T> {
+    let lastError: any;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+
+        // Don't retry on non-retryable errors
+        if (!this.isRetryable(error)) {
+          throw error;
+        }
+
+        // Don't retry on the last attempt
+        if (attempt === maxRetries - 1) {
+          throw error;
+        }
+
+        // Calculate backoff delay: 1s, 2s, 4s, 8s, etc.
+        const backoffDelay = Math.pow(2, attempt) * 1000;
+
+        // For rate limit errors, use Retry-After header if available
+        let delayMs = backoffDelay;
+        if (error instanceof JiraRateLimitError && error.response?.headers?.['retry-after']) {
+          const retryAfter = parseInt(error.response.headers['retry-after'], 10);
+          if (!isNaN(retryAfter)) {
+            delayMs = retryAfter * 1000; // Convert seconds to milliseconds
+          }
+        }
+
+        // Wait before retrying
+        await this.delay(delayMs);
+      }
+    }
+
+    // This should never be reached, but TypeScript needs it
+    throw lastError;
+  }
+
+  /**
+   * Generic request method with automatic retry logic
    *
    * @param method - HTTP method (GET, POST, PUT, DELETE)
    * @param endpoint - API endpoint (relative to base URL)
@@ -94,22 +190,25 @@ export class JiraClient {
     data?: any,
     config?: AxiosRequestConfig
   ): Promise<T> {
-    const requestConfig: AxiosRequestConfig = {
-      method,
-      url: endpoint,
-      ...config
-    };
+    // Wrap the actual request in retry logic
+    return this.retryRequest(async () => {
+      const requestConfig: AxiosRequestConfig = {
+        method,
+        url: endpoint,
+        ...config
+      };
 
-    if (data) {
-      if (method === 'GET') {
-        requestConfig.params = data;
-      } else {
-        requestConfig.data = data;
+      if (data) {
+        if (method === 'GET') {
+          requestConfig.params = data;
+        } else {
+          requestConfig.data = data;
+        }
       }
-    }
 
-    const response: AxiosResponse<T> = await this.httpClient.request(requestConfig);
-    return response.data;
+      const response: AxiosResponse<T> = await this.httpClient.request(requestConfig);
+      return response.data;
+    });
   }
 
   /**
