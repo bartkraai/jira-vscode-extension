@@ -1,9 +1,11 @@
 import * as vscode from 'vscode';
 import { AuthManager } from './api/AuthManager';
 import { ConfigManager } from './config/ConfigManager';
+import { ConfigValidator } from './config/ConfigValidator';
 import { registerAuthenticateCommand, registerClearCredentialsCommand } from './commands/authenticate';
 import { registerCacheClearCommand, registerCacheStatsCommand } from './commands/cache';
 import { registerConfigureCommand } from './commands/configure';
+import { registerValidateCommand } from './commands/validate';
 
 /**
  * Global extension context - accessible to all modules
@@ -39,6 +41,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// Initialize managers
 	const authManager = new AuthManager(context);
 	const configManager = new ConfigManager();
+	const configValidator = new ConfigValidator(configManager, authManager);
 
 	// Register authentication commands
 	context.subscriptions.push(registerAuthenticateCommand(context, authManager));
@@ -47,10 +50,76 @@ export function activate(context: vscode.ExtensionContext) {
 	// Register configuration command (setup wizard)
 	context.subscriptions.push(registerConfigureCommand(context, authManager, configManager));
 
+	// Register validation command
+	context.subscriptions.push(registerValidateCommand(context, configValidator, outputChannel));
+
 	// Register cache commands (no JiraClient yet, will show helpful message)
 	context.subscriptions.push(registerCacheClearCommand(context));
 	context.subscriptions.push(registerCacheStatsCommand(context));
 	context.subscriptions.push(outputChannel);
+
+	// Validate configuration on activation
+	// Run asynchronously to not block activation
+	validateOnActivation(configValidator, outputChannel).catch(error => {
+		outputChannel.appendLine(`Configuration validation failed: ${error}`);
+	});
+}
+
+/**
+ * Validate configuration on extension activation
+ *
+ * Runs validation asynchronously after extension activates.
+ * Logs results to output channel but does not show notifications
+ * unless there are critical errors.
+ *
+ * @param validator - The ConfigValidator instance
+ * @param outputChannel - Output channel for logging
+ */
+async function validateOnActivation(
+	validator: ConfigValidator,
+	outputChannel: vscode.OutputChannel
+): Promise<void> {
+	outputChannel.appendLine('Running configuration validation...');
+
+	const result = await validator.validate();
+
+	outputChannel.appendLine('=== Configuration Validation Results ===');
+	outputChannel.appendLine(`Valid: ${result.valid}`);
+
+	if (result.errors.length > 0) {
+		outputChannel.appendLine('\nErrors:');
+		result.errors.forEach(error => outputChannel.appendLine(`  - ${error}`));
+
+		// Only show notification for critical errors (not missing credentials)
+		const hasCriticalError = result.errors.some(
+			error => !error.includes('No credentials configured')
+		);
+
+		if (hasCriticalError) {
+			vscode.window.showWarningMessage(
+				'Jira Extension configuration has issues. Check the output channel for details.',
+				'View Output',
+				'Run Setup'
+			).then(selection => {
+				if (selection === 'View Output') {
+					outputChannel.show();
+				} else if (selection === 'Run Setup') {
+					vscode.commands.executeCommand('jira.configure');
+				}
+			});
+		}
+	}
+
+	if (result.warnings.length > 0) {
+		outputChannel.appendLine('\nWarnings:');
+		result.warnings.forEach(warning => outputChannel.appendLine(`  - ${warning}`));
+	}
+
+	if (result.valid && result.errors.length === 0) {
+		outputChannel.appendLine('\nConfiguration is valid and connection is working!');
+	}
+
+	outputChannel.appendLine('========================================');
 }
 
 /**

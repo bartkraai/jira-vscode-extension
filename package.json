@@ -31,6 +31,10 @@
         "title": "Jira: Clear Credentials"
       },
       {
+        "command": "jira.validateConfig",
+        "title": "Jira: Validate Configuration"
+      },
+      {
         "command": "jira.clearCache",
         "title": "Jira: Clear Cache"
       },
