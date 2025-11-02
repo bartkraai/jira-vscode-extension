@@ -314,6 +314,80 @@ export class JiraClient {
   }
 
   /**
+   * Get available transitions (status changes) for an issue
+   *
+   * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
+   * @returns Promise with array of available JiraTransition objects
+   * @throws JiraNotFoundError if the issue doesn't exist
+   * @throws JiraAuthenticationError if authentication fails
+   */
+  async getAvailableTransitions(issueKey: string): Promise<JiraTransition[]> {
+    try {
+      const response = await this.request<{ transitions: JiraTransition[] }>(
+        'GET',
+        `/issue/${issueKey}/transitions`
+      );
+      return response.transitions;
+    } catch (error) {
+      if (error instanceof JiraAPIError) {
+        if (error.statusCode === 404) {
+          throw new JiraNotFoundError(`Issue '${issueKey}' not found. Please verify the issue key.`);
+        } else if (error.statusCode === 401) {
+          throw new JiraAuthenticationError('Authentication failed while fetching transitions. Please verify your credentials.');
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Transition an issue to a new status
+   *
+   * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
+   * @param transitionId - The ID of the transition to execute
+   * @param comment - Optional comment to add during the transition
+   * @returns Promise that resolves when transition is complete
+   * @throws JiraNotFoundError if the issue doesn't exist
+   * @throws JiraAuthenticationError if authentication fails
+   * @throws JiraAPIError if the transition is invalid
+   */
+  async transitionIssue(
+    issueKey: string,
+    transitionId: string,
+    comment?: string
+  ): Promise<void> {
+    const payload: any = {
+      transition: { id: transitionId }
+    };
+
+    // Add comment if provided
+    if (comment) {
+      payload.update = {
+        comment: [{
+          add: {
+            body: this.convertTextToADF(comment)
+          }
+        }]
+      };
+    }
+
+    try {
+      await this.request('POST', `/issue/${issueKey}/transitions`, payload);
+    } catch (error) {
+      if (error instanceof JiraAPIError) {
+        if (error.statusCode === 404) {
+          throw new JiraNotFoundError(`Issue '${issueKey}' not found. Please verify the issue key.`);
+        } else if (error.statusCode === 401) {
+          throw new JiraAuthenticationError('Authentication failed while transitioning issue. Please verify your credentials.');
+        } else if (error.statusCode === 400) {
+          throw new JiraAPIError(`Invalid transition. The transition '${transitionId}' may not be available for this issue.`, 400, error.response);
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Convert plain text to Atlassian Document Format (ADF)
    *
    * @param text - Plain text to convert

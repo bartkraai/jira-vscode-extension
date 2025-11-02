@@ -16,7 +16,7 @@
 - [x] Feature 2.3: Fetch Assigned Issues
 - [x] Feature 2.4: Fetch Issue Details
 - [x] Feature 2.5: Create Issue
-- [ ] Feature 2.6: Update Issue Status
+- [x] Feature 2.6: Update Issue Status
 - [ ] Feature 2.7: Add Comment
 - [ ] Feature 2.8: Fetch Projects and Issue Types
 - [ ] Feature 2.9: Error Handling
