@@ -13,7 +13,7 @@
 
 - [x] Feature 2.1: API Client Architecture
 - [x] Feature 2.2: Authentication Flow
-- [ ] Feature 2.3: Fetch Assigned Issues
+- [x] Feature 2.3: Fetch Assigned Issues
 - [ ] Feature 2.4: Fetch Issue Details
 - [ ] Feature 2.5: Create Issue
 - [ ] Feature 2.6: Update Issue Status

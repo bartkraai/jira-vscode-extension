@@ -137,6 +137,55 @@ export class JiraClient {
   async getCurrentUser(): Promise<any> {
     return this.request('GET', '/myself');
   }
+
+  /**
+   * Fetch all issues assigned to the current user
+   *
+   * @param options - Optional query parameters
+   * @param options.maxResults - Maximum number of issues to return (default: 100)
+   * @param options.startAt - Starting index for pagination (default: 0)
+   * @param options.fields - Array of field names to include (default: all common fields)
+   * @returns Promise with array of JiraIssue objects
+   */
+  async getAssignedIssues(options?: {
+    maxResults?: number;
+    startAt?: number;
+    fields?: string[];
+  }): Promise<JiraIssue[]> {
+    const jql = 'assignee = currentUser() ORDER BY updated DESC';
+
+    const defaultFields = [
+      'summary',
+      'status',
+      'priority',
+      'issuetype',
+      'updated',
+      'created',
+      'assignee',
+      'reporter',
+      'description',
+      'parent',
+      'sprint',
+      'customfield_10016' // Sprint field (may vary by instance)
+    ];
+
+    const params = {
+      jql,
+      maxResults: options?.maxResults || 100,
+      startAt: options?.startAt || 0,
+      fields: options?.fields || defaultFields
+    };
+
+    try {
+      const response = await this.request<JiraSearchResponse>('GET', '/search', params);
+      return response.issues;
+    } catch (error) {
+      if (error instanceof JiraAPIError && error.statusCode === 401) {
+        throw new JiraAuthenticationError('Authentication failed while fetching issues. Please verify your credentials.');
+      }
+      throw error;
+    }
+  }
 }
 
 /**
