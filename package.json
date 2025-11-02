@@ -12,7 +12,8 @@
   ],
   "activationEvents": [
     "onStartupFinished",
-    "onCommand:jira.configure"
+    "onCommand:jira.configure",
+    "onCommand:jira.authenticate"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -20,6 +21,14 @@
       {
         "command": "jira.configure",
         "title": "Jira: Configure"
+      },
+      {
+        "command": "jira.authenticate",
+        "title": "Jira: Authenticate"
+      },
+      {
+        "command": "jira.clearCredentials",
+        "title": "Jira: Clear Credentials"
       }
     ]
   },

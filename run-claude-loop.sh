@@ -23,8 +23,8 @@ while true; do
         exit 1
     fi
     
-    # Run Claude in print mode with the prompt file content
-    claude -p --dangerously-skip-permissions "$(cat $PROMPT_FILE)"
+    # Run Claude in print mode with the prompt file content piped via stdin
+    cat "$PROMPT_FILE" | claude -p --dangerously-skip-permissions
     
     EXIT_CODE=$?
     

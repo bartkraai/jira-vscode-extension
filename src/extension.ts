@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import { AuthManager } from './api/AuthManager';
+import { registerAuthenticateCommand, registerClearCredentialsCommand } from './commands/authenticate';
 
 /**
  * Global extension context - accessible to all modules
@@ -31,9 +33,24 @@ export function activate(context: vscode.ExtensionContext) {
 
 	console.log('Jira Extension is now active');
 
-	// Register the configure command
+	// Initialize AuthManager
+	const authManager = new AuthManager(context);
+
+	// Register authentication commands
+	context.subscriptions.push(registerAuthenticateCommand(context, authManager));
+	context.subscriptions.push(registerClearCredentialsCommand(context, authManager));
+
+	// Register the configure command (placeholder for future feature)
 	const configureCommand = vscode.commands.registerCommand('jira.configure', async () => {
-		vscode.window.showInformationMessage('Jira configuration wizard will be implemented in the next feature.');
+		// For now, direct users to authenticate command
+		vscode.window.showInformationMessage(
+			'Please use "Jira: Authenticate" command to set up your credentials.',
+			'Authenticate Now'
+		).then(selection => {
+			if (selection === 'Authenticate Now') {
+				vscode.commands.executeCommand('jira.authenticate');
+			}
+		});
 	});
 
 	// Add disposables to context subscriptions for cleanup
