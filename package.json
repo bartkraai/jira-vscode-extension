@@ -24,9 +24,12 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run package",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
+    "package": "webpack --mode production",
+    "webpack": "webpack --mode development",
+    "webpack-watch": "webpack --mode development --watch",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js"
@@ -35,15 +38,19 @@
     "axios": "^1.6.0"
   },
   "devDependencies": {
+    "@types/mocha": "^10.0.6",
     "@types/node": "^20.10.0",
     "@types/vscode": "^1.85.0",
-    "@types/mocha": "^10.0.6",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
     "@vscode/test-electron": "^2.3.8",
     "eslint": "^8.55.0",
     "mocha": "^10.2.0",
+    "prettier": "^3.1.0",
+    "terser-webpack-plugin": "^5.3.14",
+    "ts-loader": "^9.5.4",
     "typescript": "^5.3.3",
-    "prettier": "^3.1.0"
+    "webpack": "^5.102.1",
+    "webpack-cli": "^6.0.1"
   }
 }
