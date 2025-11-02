@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { AuthManager } from './api/AuthManager';
 import { ConfigManager } from './config/ConfigManager';
 import { ConfigValidator } from './config/ConfigValidator';
+import { ConfigChangeHandler } from './config/ConfigChangeHandler';
 import { registerAuthenticateCommand, registerClearCredentialsCommand } from './commands/authenticate';
 import { registerCacheClearCommand, registerCacheStatsCommand } from './commands/cache';
 import { registerConfigureCommand } from './commands/configure';
@@ -42,6 +43,7 @@ export function activate(context: vscode.ExtensionContext) {
 	const authManager = new AuthManager(context);
 	const configManager = new ConfigManager();
 	const configValidator = new ConfigValidator(configManager, authManager);
+	const configChangeHandler = new ConfigChangeHandler(configManager, authManager, outputChannel);
 
 	// Register authentication commands
 	context.subscriptions.push(registerAuthenticateCommand(context, authManager));
@@ -56,6 +58,11 @@ export function activate(context: vscode.ExtensionContext) {
 	// Register cache commands (no JiraClient yet, will show helpful message)
 	context.subscriptions.push(registerCacheClearCommand(context));
 	context.subscriptions.push(registerCacheStatsCommand(context));
+
+	// Register configuration change handler
+	// Note: The handler will be fully utilized once tree views and JiraClient are implemented
+	// For now, it logs changes and prepares for future integration
+	context.subscriptions.push(configChangeHandler);
 	context.subscriptions.push(outputChannel);
 
 	// Validate configuration on activation
