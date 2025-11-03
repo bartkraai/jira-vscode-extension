@@ -9,6 +9,17 @@ Seamless Jira integration for VS Code with GitHub Copilot support.
 - Investigate tickets with GitHub Copilot
 - Update issue status and add comments
 - GitHub Copilot tools for Jira automation
+- Keyboard shortcuts for common actions
+
+## Keyboard Shortcuts
+
+| Action | Windows/Linux | macOS |
+|--------|---------------|-------|
+| Refresh issues | `Ctrl+Shift+R` | `Cmd+Shift+R` |
+| Open selected issue in Jira | `Enter` | `Enter` |
+| Search/Filter issues | `Ctrl+Shift+F` | `Cmd+Shift+F` |
+
+Note: Keyboard shortcuts work when the Jira My Work view is focused.
 
 ## Development
 

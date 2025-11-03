@@ -51,7 +51,7 @@
 - [x] Feature 5.5: Search/Filter Input
 - [x] Feature 5.6: Change Status Action
 - [x] Feature 5.7: Add Comment Action
-- [ ] Feature 5.8: Keyboard Shortcuts
+- [x] Feature 5.8: Keyboard Shortcuts
 
 ## Epic 6: Quick Ticket Creation - UI & Workflow
 

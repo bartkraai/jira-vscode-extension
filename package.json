@@ -221,7 +221,26 @@
           "group": "actions@2"
         }
       ]
-    }
+    },
+    "keybindings": [
+      {
+        "command": "jira.refresh",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "view == jiraMyWork"
+      },
+      {
+        "command": "jira.openIssue",
+        "key": "enter",
+        "when": "view == jiraMyWork && viewItem == issue"
+      },
+      {
+        "command": "jira.searchIssues",
+        "key": "ctrl+shift+f",
+        "mac": "cmd+shift+f",
+        "when": "view == jiraMyWork"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
