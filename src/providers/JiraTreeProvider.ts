@@ -159,6 +159,15 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 	private lastRefreshTime?: Date;
 	private isLoading: boolean = false;
 
+	/**
+	 * Filter state for issues
+	 */
+	private filters = {
+		issueTypes: new Set<string>(),
+		priorities: new Set<string>(),
+		sprints: new Set<string>()
+	};
+
 	constructor(
 		private authManager: AuthManager,
 		private configManager: ConfigManager,
@@ -292,7 +301,15 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 			return [];
 		}
 
-		const grouped = this.groupByStatus(issues);
+		// Apply filters before grouping
+		const filteredIssues = this.applyFilters(issues);
+
+		// Handle case where all issues are filtered out
+		if (filteredIssues.length === 0) {
+			return [];
+		}
+
+		const grouped = this.groupByStatus(filteredIssues);
 
 		// Sort statuses in a logical order (To Do, In Progress, Done, etc.)
 		const statusOrder = this.getStatusOrder(grouped);
@@ -311,7 +328,8 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 	 */
 	private async getIssuesForStatus(client: JiraClient, status: string): Promise<IssueItem[]> {
 		const issues = await client.getAssignedIssues();
-		return issues
+		const filteredIssues = this.applyFilters(issues);
+		return filteredIssues
 			.filter(issue => issue.fields.status.name === status)
 			.map(issue => new IssueItem(issue));
 	}
@@ -436,5 +454,99 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 	 */
 	getLastRefreshTime(): Date | undefined {
 		return this.lastRefreshTime;
+	}
+
+	// ==================== Filter Methods ====================
+
+	/**
+	 * Apply filters to issues
+	 *
+	 * Filters issues based on the current filter state (issue types, priorities, sprints)
+	 *
+	 * @param issues - Array of issues to filter
+	 * @returns Filtered array of issues
+	 */
+	private applyFilters(issues: JiraIssue[]): JiraIssue[] {
+		return issues.filter(issue => {
+			// Filter by issue type
+			if (this.filters.issueTypes.size > 0 &&
+				!this.filters.issueTypes.has(issue.fields.issuetype.name)) {
+				return false;
+			}
+
+			// Filter by priority
+			if (this.filters.priorities.size > 0 &&
+				!this.filters.priorities.has(issue.fields.priority.name)) {
+				return false;
+			}
+
+			// Filter by sprint (TODO: implement when sprint field is available)
+			// if (this.filters.sprints.size > 0) {
+			//   // Sprint filtering logic
+			// }
+
+			return true;
+		});
+	}
+
+	/**
+	 * Show quick pick to filter by issue type
+	 *
+	 * Allows user to select multiple issue types to show.
+	 * If no types are selected, all types are shown.
+	 */
+	async filterByIssueType(): Promise<void> {
+		// Define common issue types
+		const allTypes = ['Bug', 'Story', 'Task', 'Epic', 'Subtask', 'Sub-task'];
+
+		// Show multi-select quick pick
+		const selected = await vscode.window.showQuickPick(allTypes, {
+			canPickMany: true,
+			placeHolder: 'Select issue types to show (or cancel to show all)',
+			title: 'Filter by Issue Type'
+		});
+
+		// If user cancelled, don't change filters
+		if (selected === undefined) {
+			return;
+		}
+
+		// Update filter state
+		this.filters.issueTypes = new Set(selected);
+
+		// Show status message
+		if (selected.length === 0) {
+			vscode.window.showInformationMessage('Showing all issue types');
+		} else {
+			vscode.window.showInformationMessage(`Filtering: ${selected.join(', ')}`);
+		}
+
+		// Refresh tree view
+		this.refresh();
+	}
+
+	/**
+	 * Clear all filters
+	 *
+	 * Resets all filter state and refreshes the tree view to show all issues.
+	 */
+	clearFilters(): void {
+		this.filters.issueTypes.clear();
+		this.filters.priorities.clear();
+		this.filters.sprints.clear();
+
+		vscode.window.showInformationMessage('All filters cleared');
+		this.refresh();
+	}
+
+	/**
+	 * Check if any filters are active
+	 *
+	 * @returns True if any filter is currently active
+	 */
+	hasActiveFilters(): boolean {
+		return this.filters.issueTypes.size > 0 ||
+			this.filters.priorities.size > 0 ||
+			this.filters.sprints.size > 0;
 	}
 }

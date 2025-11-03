@@ -55,6 +55,16 @@
       {
         "command": "jira.copyIssueKey",
         "title": "Copy Issue Key"
+      },
+      {
+        "command": "jira.filterByIssueType",
+        "title": "Filter by Issue Type",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "jira.clearFilters",
+        "title": "Clear Filters",
+        "icon": "$(clear-all)"
       }
     ],
     "configuration": {
@@ -127,6 +137,16 @@
       "view/title": [
         {
           "command": "jira.refresh",
+          "when": "view == jiraMyWork",
+          "group": "navigation"
+        },
+        {
+          "command": "jira.filterByIssueType",
+          "when": "view == jiraMyWork",
+          "group": "navigation"
+        },
+        {
+          "command": "jira.clearFilters",
           "when": "view == jiraMyWork",
           "group": "navigation"
         }

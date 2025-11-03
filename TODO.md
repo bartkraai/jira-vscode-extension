@@ -44,7 +44,7 @@
 
 ## Epic 5: My Work View - Filtering & Actions
 
-- [ ] Feature 5.1: Filter by Issue Type
+- [x] Feature 5.1: Filter by Issue Type
 - [ ] Feature 5.2: Filter by Priority
 - [ ] Feature 5.3: Filter by Sprint
 - [ ] Feature 5.4: Filter Persistence

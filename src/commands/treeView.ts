@@ -109,3 +109,53 @@ export function registerCopyIssueKeyCommand(
 		}
 	});
 }
+
+/**
+ * Register the filter by issue type command
+ *
+ * Shows a quick pick to filter issues by their type (Bug, Story, Task, etc.).
+ * Users can select multiple types or clear the filter.
+ *
+ * @param context - VS Code extension context
+ * @param treeProvider - The Jira tree provider instance
+ * @returns Disposable for the command
+ */
+export function registerFilterByIssueTypeCommand(
+	context: vscode.ExtensionContext,
+	treeProvider: JiraTreeProvider
+): vscode.Disposable {
+	return vscode.commands.registerCommand('jira.filterByIssueType', async () => {
+		try {
+			await treeProvider.filterByIssueType();
+		} catch (error) {
+			vscode.window.showErrorMessage(
+				`Failed to apply filter: ${error instanceof Error ? error.message : String(error)}`
+			);
+		}
+	});
+}
+
+/**
+ * Register the clear filters command
+ *
+ * Clears all active filters (issue type, priority, sprint) and
+ * refreshes the tree view to show all issues.
+ *
+ * @param context - VS Code extension context
+ * @param treeProvider - The Jira tree provider instance
+ * @returns Disposable for the command
+ */
+export function registerClearFiltersCommand(
+	context: vscode.ExtensionContext,
+	treeProvider: JiraTreeProvider
+): vscode.Disposable {
+	return vscode.commands.registerCommand('jira.clearFilters', () => {
+		try {
+			treeProvider.clearFilters();
+		} catch (error) {
+			vscode.window.showErrorMessage(
+				`Failed to clear filters: ${error instanceof Error ? error.message : String(error)}`
+			);
+		}
+	});
+}
