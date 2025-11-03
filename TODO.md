@@ -49,7 +49,7 @@
 - [x] Feature 5.3: Filter by Sprint
 - [x] Feature 5.4: Filter Persistence
 - [x] Feature 5.5: Search/Filter Input
-- [ ] Feature 5.6: Change Status Action
+- [x] Feature 5.6: Change Status Action
 - [ ] Feature 5.7: Add Comment Action
 - [ ] Feature 5.8: Keyboard Shortcuts
 

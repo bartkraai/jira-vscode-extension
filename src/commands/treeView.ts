@@ -3,6 +3,8 @@ import { JiraTreeProvider, IssueItem } from '../providers/JiraTreeProvider';
 import { JiraIssue } from '../models/jira';
 import { ConfigManager } from '../config/ConfigManager';
 import { CacheManager } from '../api/CacheManager';
+import { AuthManager } from '../api/AuthManager';
+import { JiraClient } from '../api/JiraClient';
 
 /**
  * Register the refresh command for the tree view
@@ -255,6 +257,109 @@ export function registerClearSearchCommand(
 		} catch (error) {
 			vscode.window.showErrorMessage(
 				`Failed to clear search: ${error instanceof Error ? error.message : String(error)}`
+			);
+		}
+	});
+}
+
+/**
+ * Register the change status command
+ *
+ * Allows users to change the status (transition) of a Jira issue.
+ * Fetches available transitions and shows a quick pick for selection.
+ *
+ * @param context - VS Code extension context
+ * @param authManager - Authentication manager instance
+ * @param cacheManager - Cache manager instance
+ * @param treeProvider - The Jira tree provider instance
+ * @returns Disposable for the command
+ */
+export function registerChangeStatusCommand(
+	context: vscode.ExtensionContext,
+	authManager: AuthManager,
+	cacheManager: CacheManager,
+	treeProvider: JiraTreeProvider
+): vscode.Disposable {
+	return vscode.commands.registerCommand('jira.changeStatus', async (item: IssueItem) => {
+		try {
+			// Get credentials
+			const credentials = await authManager.getCredentials();
+			if (!credentials) {
+				vscode.window.showErrorMessage('Please configure Jira credentials first');
+				return;
+			}
+
+			// Create Jira client
+			const jiraClient = new JiraClient(
+				credentials.url,
+				credentials.email,
+				credentials.token,
+				cacheManager
+			);
+
+			// Fetch available transitions
+			const transitions = await vscode.window.withProgress(
+				{
+					location: vscode.ProgressLocation.Notification,
+					title: `Fetching available status transitions for ${item.issue.key}...`,
+					cancellable: false
+				},
+				async () => {
+					return await jiraClient.getAvailableTransitions(item.issue.key);
+				}
+			);
+
+			// Check if there are any transitions
+			if (transitions.length === 0) {
+				vscode.window.showInformationMessage(
+					`No status transitions available for ${item.issue.key}`
+				);
+				return;
+			}
+
+			// Create quick pick items from transitions
+			const transitionItems = transitions.map(transition => ({
+				label: transition.name,
+				description: `${item.issue.fields.status.name} → ${transition.to.name}`,
+				transition
+			}));
+
+			// Show quick pick for status selection
+			const selected = await vscode.window.showQuickPick(transitionItems, {
+				placeHolder: 'Select new status',
+				title: `Change Status for ${item.issue.key}`
+			});
+
+			// If user cancelled, exit
+			if (!selected) {
+				return;
+			}
+
+			// Execute the transition
+			await vscode.window.withProgress(
+				{
+					location: vscode.ProgressLocation.Notification,
+					title: `Updating ${item.issue.key}...`,
+					cancellable: false
+				},
+				async () => {
+					await jiraClient.transitionIssue(
+						item.issue.key,
+						selected.transition.id
+					);
+				}
+			);
+
+			// Refresh tree view to show updated status
+			treeProvider.refresh();
+
+			// Show success message
+			vscode.window.showInformationMessage(
+				`${item.issue.key} moved to ${selected.transition.to.name}`
+			);
+		} catch (error) {
+			vscode.window.showErrorMessage(
+				`Failed to change status: ${error instanceof Error ? error.message : String(error)}`
 			);
 		}
 	});

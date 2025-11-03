@@ -85,6 +85,10 @@
         "command": "jira.clearSearch",
         "title": "Clear Search",
         "icon": "$(close)"
+      },
+      {
+        "command": "jira.changeStatus",
+        "title": "Change Status"
       }
     ],
     "configuration": {
@@ -201,6 +205,11 @@
           "command": "jira.copyIssueKey",
           "when": "view == jiraMyWork && viewItem == issue",
           "group": "navigation@2"
+        },
+        {
+          "command": "jira.changeStatus",
+          "when": "view == jiraMyWork && viewItem == issue",
+          "group": "actions@1"
         }
       ]
     }
