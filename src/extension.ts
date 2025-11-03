@@ -57,6 +57,16 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(treeView);
 
+	// Start auto-refresh if configured
+	treeProvider.startAutoRefresh();
+
+	// Add cleanup for auto-refresh timer
+	context.subscriptions.push({
+		dispose: () => {
+			treeProvider.stopAutoRefresh();
+		}
+	});
+
 	// Register authentication commands
 	context.subscriptions.push(registerAuthenticateCommand(context, authManager));
 	context.subscriptions.push(registerClearCredentialsCommand(context, authManager));
@@ -75,7 +85,9 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(registerRefreshCommand(context, treeProvider, cacheManager));
 	context.subscriptions.push(registerOpenInBrowserCommand(context, configManager));
 
-	// Register configuration change handler
+	// Register configuration change handler and set callbacks
+	configChangeHandler.setTreeViewRefreshCallback(() => treeProvider.refresh());
+	configChangeHandler.setAutoRefreshUpdateCallback(() => treeProvider.updateRefreshInterval());
 	context.subscriptions.push(configChangeHandler);
 	context.subscriptions.push(outputChannel);
 

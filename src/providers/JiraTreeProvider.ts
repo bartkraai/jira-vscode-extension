@@ -128,6 +128,9 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 	private _onDidChangeTreeData = new vscode.EventEmitter<TreeItem | undefined | null | void>();
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
+	private refreshTimer?: NodeJS.Timeout;
+	private lastRefreshTime?: Date;
+
 	constructor(
 		private authManager: AuthManager,
 		private configManager: ConfigManager,
@@ -163,6 +166,7 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 	 * This triggers a reload of all data from Jira
 	 */
 	refresh(): void {
+		this.lastRefreshTime = new Date();
 		this._onDidChangeTreeData.fire();
 	}
 
@@ -310,5 +314,64 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 			...ordered.filter(s => s !== undefined),
 			...unordered.sort()
 		];
+	}
+
+	// ==================== Auto-Refresh Methods ====================
+
+	/**
+	 * Start automatic refresh on configured interval
+	 *
+	 * Checks the autoRefreshInterval configuration and starts a timer
+	 * to automatically refresh the tree view at the specified interval.
+	 * If interval is 0, auto-refresh is disabled.
+	 */
+	startAutoRefresh(): void {
+		// Stop any existing timer first
+		this.stopAutoRefresh();
+
+		const interval = this.configManager.autoRefreshInterval;
+
+		// If interval is 0, auto-refresh is disabled
+		if (interval <= 0) {
+			return;
+		}
+
+		// Start the refresh timer
+		this.refreshTimer = setInterval(() => {
+			this.refresh();
+		}, interval * 1000); // Convert seconds to milliseconds
+	}
+
+	/**
+	 * Stop automatic refresh
+	 *
+	 * Clears the auto-refresh timer if one is running.
+	 * Safe to call even if no timer is active.
+	 */
+	stopAutoRefresh(): void {
+		if (this.refreshTimer) {
+			clearInterval(this.refreshTimer);
+			this.refreshTimer = undefined;
+		}
+	}
+
+	/**
+	 * Update the auto-refresh interval
+	 *
+	 * Called when the configuration changes to restart auto-refresh
+	 * with the new interval. This stops the current timer and starts
+	 * a new one with the updated configuration.
+	 */
+	updateRefreshInterval(): void {
+		this.startAutoRefresh(); // This will stop existing timer and start new one
+	}
+
+	/**
+	 * Get the last refresh time
+	 *
+	 * @returns The date/time of the last refresh, or undefined if never refreshed
+	 */
+	getLastRefreshTime(): Date | undefined {
+		return this.lastRefreshTime;
 	}
 }
