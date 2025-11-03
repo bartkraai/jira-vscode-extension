@@ -35,7 +35,7 @@
 - [x] Feature 4.1: Tree Data Provider Implementation
 - [x] Feature 4.2: Tree Item Definitions
 - [x] Feature 4.3: Tree View Registration
-- [ ] Feature 4.4: Manual Refresh
+- [x] Feature 4.4: Manual Refresh
 - [ ] Feature 4.5: Auto Refresh
 - [ ] Feature 4.6: Loading States
 - [ ] Feature 4.7: Empty State

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { JiraClient } from '../api/JiraClient';
 import { AuthManager } from '../api/AuthManager';
 import { ConfigManager } from '../config/ConfigManager';
+import { CacheManager } from '../api/CacheManager';
 import { JiraIssue } from '../models/jira';
 
 /**
@@ -129,7 +130,8 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 
 	constructor(
 		private authManager: AuthManager,
-		private configManager: ConfigManager
+		private configManager: ConfigManager,
+		private cacheManager: CacheManager
 	) {}
 
 	/**
@@ -147,7 +149,8 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 			return new JiraClient(
 				credentials.url,
 				credentials.email,
-				credentials.token
+				credentials.token,
+				this.cacheManager
 			);
 		} catch (error) {
 			return null;

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { AuthManager } from './api/AuthManager';
+import { CacheManager } from './api/CacheManager';
 import { ConfigManager } from './config/ConfigManager';
 import { ConfigValidator } from './config/ConfigValidator';
 import { ConfigChangeHandler } from './config/ConfigChangeHandler';
@@ -44,11 +45,12 @@ export function activate(context: vscode.ExtensionContext) {
 	// Initialize managers
 	const authManager = new AuthManager(context);
 	const configManager = new ConfigManager();
+	const cacheManager = new CacheManager();
 	const configValidator = new ConfigValidator(configManager, authManager);
 	const configChangeHandler = new ConfigChangeHandler(configManager, authManager, outputChannel);
 
 	// Initialize Tree View Provider
-	const treeProvider = new JiraTreeProvider(authManager, configManager);
+	const treeProvider = new JiraTreeProvider(authManager, configManager, cacheManager);
 	const treeView = vscode.window.createTreeView('jiraMyWork', {
 		treeDataProvider: treeProvider,
 		showCollapseAll: true
@@ -70,7 +72,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(registerCacheStatsCommand(context));
 
 	// Register tree view commands
-	context.subscriptions.push(registerRefreshCommand(context, treeProvider));
+	context.subscriptions.push(registerRefreshCommand(context, treeProvider, cacheManager));
 	context.subscriptions.push(registerOpenInBrowserCommand(context, configManager));
 
 	// Register configuration change handler

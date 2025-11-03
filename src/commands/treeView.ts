@@ -2,17 +2,23 @@ import * as vscode from 'vscode';
 import { JiraTreeProvider } from '../providers/JiraTreeProvider';
 import { JiraIssue } from '../models/jira';
 import { ConfigManager } from '../config/ConfigManager';
+import { CacheManager } from '../api/CacheManager';
 
 /**
  * Register the refresh command for the tree view
  *
+ * Refreshes the tree view and clears the assigned issues cache to ensure
+ * fresh data is fetched from Jira.
+ *
  * @param context - VS Code extension context
  * @param treeProvider - The Jira tree provider instance
+ * @param cacheManager - The shared cache manager instance
  * @returns Disposable for the command
  */
 export function registerRefreshCommand(
 	context: vscode.ExtensionContext,
-	treeProvider: JiraTreeProvider
+	treeProvider: JiraTreeProvider,
+	cacheManager: CacheManager
 ): vscode.Disposable {
 	return vscode.commands.registerCommand('jira.refresh', async () => {
 		try {
@@ -23,6 +29,10 @@ export function registerRefreshCommand(
 					cancellable: false
 				},
 				async () => {
+					// Clear the assigned issues cache to force a fresh fetch
+					const invalidated = cacheManager.invalidate('assignedIssues:*');
+
+					// Trigger tree view refresh
 					treeProvider.refresh();
 				}
 			);
