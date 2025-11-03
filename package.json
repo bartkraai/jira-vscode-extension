@@ -118,6 +118,11 @@
         "command": "jira.showCreateMenu",
         "title": "Create Issue",
         "icon": "$(add)"
+      },
+      {
+        "command": "jira.investigateWithCopilot",
+        "title": "Investigate with Copilot",
+        "icon": "$(copilot)"
       }
     ],
     "configuration": {
@@ -239,6 +244,11 @@
           "command": "jira.copyIssueKey",
           "when": "view == jiraMyWork && viewItem == issue",
           "group": "navigation@2"
+        },
+        {
+          "command": "jira.investigateWithCopilot",
+          "when": "view == jiraMyWork && viewItem == issue",
+          "group": "copilot@1"
         },
         {
           "command": "jira.changeStatus",
