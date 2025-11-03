@@ -51,6 +51,10 @@
       {
         "command": "jira.openIssue",
         "title": "Open in Jira"
+      },
+      {
+        "command": "jira.copyIssueKey",
+        "title": "Copy Issue Key"
       }
     ],
     "configuration": {
@@ -132,6 +136,11 @@
           "command": "jira.openIssue",
           "when": "view == jiraMyWork && viewItem == issue",
           "group": "navigation@1"
+        },
+        {
+          "command": "jira.copyIssueKey",
+          "when": "view == jiraMyWork && viewItem == issue",
+          "group": "navigation@2"
         }
       ]
     }

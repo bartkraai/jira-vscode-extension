@@ -40,7 +40,7 @@
 - [x] Feature 4.6: Loading States
 - [x] Feature 4.7: Empty State
 - [x] Feature 4.8: View in Jira Action
-- [ ] Feature 4.9: Copy Ticket ID Action
+- [x] Feature 4.9: Copy Ticket ID Action
 
 ## Epic 5: My Work View - Filtering & Actions
 

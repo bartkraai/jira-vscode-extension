@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { JiraTreeProvider } from '../providers/JiraTreeProvider';
+import { JiraTreeProvider, IssueItem } from '../providers/JiraTreeProvider';
 import { JiraIssue } from '../models/jira';
 import { ConfigManager } from '../config/ConfigManager';
 import { CacheManager } from '../api/CacheManager';
@@ -78,6 +78,33 @@ export function registerOpenIssueCommand(
 		} catch (error) {
 			vscode.window.showErrorMessage(
 				`Failed to open issue in browser: ${error instanceof Error ? error.message : String(error)}`
+			);
+		}
+	});
+}
+
+/**
+ * Register the copy issue key command
+ *
+ * Copies a Jira issue key to the clipboard.
+ * This command is triggered from the tree view context menu.
+ *
+ * @param context - VS Code extension context
+ * @returns Disposable for the command
+ */
+export function registerCopyIssueKeyCommand(
+	context: vscode.ExtensionContext
+): vscode.Disposable {
+	return vscode.commands.registerCommand('jira.copyIssueKey', async (item: IssueItem) => {
+		try {
+			// Copy the issue key to the clipboard
+			await vscode.env.clipboard.writeText(item.issue.key);
+
+			// Show success notification
+			vscode.window.showInformationMessage(`Copied ${item.issue.key} to clipboard`);
+		} catch (error) {
+			vscode.window.showErrorMessage(
+				`Failed to copy issue key: ${error instanceof Error ? error.message : String(error)}`
 			);
 		}
 	});
