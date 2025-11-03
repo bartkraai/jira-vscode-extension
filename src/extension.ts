@@ -5,11 +5,13 @@ import { ConfigManager } from './config/ConfigManager';
 import { ConfigValidator } from './config/ConfigValidator';
 import { ConfigChangeHandler } from './config/ConfigChangeHandler';
 import { JiraTreeProvider } from './providers/JiraTreeProvider';
+import { CreateIssueWebviewProvider } from './providers/CreateIssueWebviewProvider';
 import { registerAuthenticateCommand, registerClearCredentialsCommand } from './commands/authenticate';
 import { registerCacheClearCommand, registerCacheStatsCommand } from './commands/cache';
 import { registerConfigureCommand } from './commands/configure';
 import { registerValidateCommand } from './commands/validate';
 import { registerRefreshCommand, registerOpenIssueCommand, registerCopyIssueKeyCommand, registerFilterByIssueTypeCommand, registerFilterByPriorityCommand, registerFilterBySprintCommand, registerClearFiltersCommand, registerSearchIssuesCommand, registerClearSearchCommand, registerChangeStatusCommand, registerAddCommentCommand } from './commands/treeView';
+import { JiraClient } from './api/JiraClient';
 
 /**
  * Global extension context - accessible to all modules
@@ -93,6 +95,54 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(registerClearSearchCommand(context, treeProvider));
 	context.subscriptions.push(registerChangeStatusCommand(context, authManager, cacheManager, treeProvider));
 	context.subscriptions.push(registerAddCommentCommand(context, authManager, cacheManager));
+
+	// Register ticket creation commands
+	// Create webview provider (will be initialized on demand with JiraClient)
+	let webviewProvider: CreateIssueWebviewProvider | null = null;
+
+	const getOrCreateWebviewProvider = async (): Promise<CreateIssueWebviewProvider | null> => {
+		// Get credentials to create JiraClient
+		const credentials = await authManager.getCredentials();
+		if (!credentials) {
+			vscode.window.showErrorMessage(
+				'Please configure Jira credentials first using "Jira: Configure" command.'
+			);
+			return null;
+		}
+
+		// Create or reuse webview provider
+		if (!webviewProvider) {
+			const jiraClient = new JiraClient(
+				credentials.url,
+				credentials.email,
+				credentials.token,
+				cacheManager
+			);
+			webviewProvider = new CreateIssueWebviewProvider(context, jiraClient, configManager);
+		}
+
+		return webviewProvider;
+	};
+
+	// Register "Create Bug Against Feature" command
+	context.subscriptions.push(
+		vscode.commands.registerCommand('jira.createBugAgainstFeature', async () => {
+			const provider = await getOrCreateWebviewProvider();
+			if (provider) {
+				await provider.show('bugAgainstFeature', 'Bug');
+			}
+		})
+	);
+
+	// Register "Create Internal Defect" command (for future use)
+	context.subscriptions.push(
+		vscode.commands.registerCommand('jira.createInternalDefect', async () => {
+			const provider = await getOrCreateWebviewProvider();
+			if (provider) {
+				await provider.show('internalDefect', 'Bug');
+			}
+		})
+	);
 
 	// Register configuration change handler and set callbacks
 	configChangeHandler.setTreeViewRefreshCallback(() => treeProvider.refresh());

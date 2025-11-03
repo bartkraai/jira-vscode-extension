@@ -93,6 +93,16 @@
       {
         "command": "jira.addComment",
         "title": "Add Comment"
+      },
+      {
+        "command": "jira.createBugAgainstFeature",
+        "title": "Jira: Create Bug Against Feature",
+        "icon": "$(bug)"
+      },
+      {
+        "command": "jira.createInternalDefect",
+        "title": "Jira: Create Internal Defect",
+        "icon": "$(bug)"
       }
     ],
     "configuration": {
