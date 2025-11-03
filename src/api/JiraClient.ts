@@ -9,7 +9,8 @@ import {
   JiraIssueType,
   JiraTransition,
   JiraComment,
-  JiraCreateMetadata
+  JiraCreateMetadata,
+  IssueContext
 } from '../models/jira';
 import { CacheManager, CacheTTL } from './CacheManager';
 
@@ -846,6 +847,167 @@ export class JiraClient {
       version: 1,
       content
     };
+  }
+
+  /**
+   * Extract acceptance criteria from issue description or custom fields
+   *
+   * @param issue - The issue to extract criteria from
+   * @returns Acceptance criteria as a string, or null if not found
+   */
+  private extractAcceptanceCriteria(issue: JiraIssueDetails): string | null {
+    // Check if there's a custom acceptance criteria field
+    // Common custom field names: customfield_10xxx, acceptanceCriteria, etc.
+    const customFields = Object.keys(issue.fields).filter(
+      key => key.toLowerCase().includes('acceptance') || key.toLowerCase().includes('criteria')
+    );
+
+    for (const fieldKey of customFields) {
+      const value = issue.fields[fieldKey];
+      if (value) {
+        // If it's ADF, convert to plain text (simplified)
+        if (typeof value === 'object' && value.type === 'doc') {
+          return this.convertADFToPlainText(value);
+        } else if (typeof value === 'string') {
+          return value;
+        }
+      }
+    }
+
+    // If no custom field found, try to extract from description
+    if (issue.fields.description) {
+      const descText = this.convertADFToPlainText(issue.fields.description);
+
+      // Look for common acceptance criteria patterns
+      const patterns = [
+        /acceptance criteria:?\s*\n([\s\S]*?)(?:\n\n|$)/i,
+        /acceptance:?\s*\n([\s\S]*?)(?:\n\n|$)/i,
+        /ac:?\s*\n([\s\S]*?)(?:\n\n|$)/i
+      ];
+
+      for (const pattern of patterns) {
+        const match = descText.match(pattern);
+        if (match && match[1]) {
+          return match[1].trim();
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Convert Atlassian Document Format (ADF) to plain text
+   *
+   * @param adf - ADF object to convert
+   * @returns Plain text representation
+   */
+  private convertADFToPlainText(adf: any): string {
+    if (!adf || typeof adf !== 'object') {
+      return '';
+    }
+
+    if (adf.type === 'text') {
+      return adf.text || '';
+    }
+
+    if (adf.type === 'hardBreak') {
+      return '\n';
+    }
+
+    if (adf.content && Array.isArray(adf.content)) {
+      return adf.content.map((node: any) => this.convertADFToPlainText(node)).join('');
+    }
+
+    return '';
+  }
+
+  /**
+   * Fetch comprehensive issue context including comments, attachments, and related issues
+   *
+   * This method fetches all relevant information about an issue to provide complete
+   * context for investigation, particularly useful for Copilot integration.
+   *
+   * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
+   * @param useCache - Whether to use cached results (default: true)
+   * @returns Promise with IssueContext object containing full issue details
+   * @throws JiraNotFoundError if the issue doesn't exist
+   * @throws JiraAuthenticationError if authentication fails
+   */
+  async getFullIssueContext(issueKey: string, useCache: boolean = true): Promise<IssueContext> {
+    const cacheKey = `issueContext:${issueKey}`;
+
+    // Check cache first
+    if (useCache) {
+      const cached = this.cache.get<IssueContext>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
+    try {
+      // Fetch the full issue details
+      const issue = await this.getIssueDetails(issueKey, useCache);
+
+      // Extract acceptance criteria from description or custom field
+      const acceptanceCriteria = this.extractAcceptanceCriteria(issue);
+
+      // Get comments (filter out system/bot comments)
+      const comments = (issue.fields.comment?.comments || []).filter(
+        (c: JiraComment) => c.author.accountType !== 'atlassian'
+      );
+
+      // Get related issues (linked issues, subtasks, parent)
+      const related: JiraIssue[] = [];
+
+      // Add subtasks
+      if (issue.fields.subtasks && issue.fields.subtasks.length > 0) {
+        related.push(...issue.fields.subtasks);
+      }
+
+      // Add linked issues (both inward and outward)
+      if (issue.fields.issuelinks && issue.fields.issuelinks.length > 0) {
+        issue.fields.issuelinks.forEach(link => {
+          if (link.inwardIssue) {
+            related.push(link.inwardIssue);
+          }
+          if (link.outwardIssue) {
+            related.push(link.outwardIssue);
+          }
+        });
+      }
+
+      // Add parent if this is a subtask
+      if (issue.fields.parent) {
+        related.push(issue.fields.parent);
+      }
+
+      // Get attachments metadata
+      const attachments = issue.fields.attachment || [];
+
+      // Build the context object
+      const context: IssueContext = {
+        issue,
+        acceptanceCriteria,
+        comments,
+        related,
+        attachments
+      };
+
+      // Cache the results
+      this.cache.set(cacheKey, context, CacheTTL.ISSUE_DETAILS);
+
+      return context;
+    } catch (error) {
+      if (error instanceof JiraAPIError) {
+        if (error.statusCode === 404) {
+          throw new JiraNotFoundError(`Issue '${issueKey}' not found. Please verify the issue key.`);
+        } else if (error.statusCode === 401) {
+          throw new JiraAuthenticationError('Authentication failed while fetching issue context. Please verify your credentials.');
+        }
+      }
+      throw error;
+    }
   }
 }
 

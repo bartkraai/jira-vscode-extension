@@ -243,3 +243,15 @@ export interface JiraAPIError {
   statusCode: number;
   response?: any;
 }
+
+/**
+ * Full issue context for Copilot investigation
+ * Contains all relevant data for understanding an issue
+ */
+export interface IssueContext {
+  issue: JiraIssueDetails;
+  acceptanceCriteria: string | null;
+  comments: JiraComment[];
+  related: JiraIssue[];
+  attachments: JiraAttachment[];
+}
