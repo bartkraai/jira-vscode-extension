@@ -85,7 +85,7 @@
 - [x] Feature 8.5: Tool: Link PR
 - [x] Feature 8.6: Tool: Create Subtask
 - [x] Feature 8.7: Tool: Log Time (Optional)
-- [ ] Feature 8.8: Confirmation Flows
+- [x] Feature 8.8: Confirmation Flows
 - [ ] Feature 8.9: Tool Usage Documentation
 
 ## Epic 10: Polish & Error Handling

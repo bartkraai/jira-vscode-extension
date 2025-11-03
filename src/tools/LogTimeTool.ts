@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { JiraClient } from '../api/JiraClient';
 import { AuthManager } from '../api/AuthManager';
 import { CacheManager } from '../api/CacheManager';
+import { ConfigManager } from '../config/ConfigManager';
+import { ConfirmationHelper } from '../utils/confirmationHelper';
 import { parseTimeToSeconds, validateTimeString, formatSecondsToTime } from '../utils/timeParser';
 
 /**
@@ -18,6 +20,8 @@ export interface ILogTimeParameters {
  * This tool allows Copilot to log time spent on issues with optional work descriptions.
  *
  * Feature 8.7: Tool: Log Time (Optional)
+ * Feature 8.8: Confirmation Flows
+ * Time logging is considered a destructive operation and requires user confirmation by default.
  *
  * Supported time formats:
  * - "2h" -> 2 hours
@@ -31,14 +35,17 @@ export class LogTimeTool implements vscode.LanguageModelTool<ILogTimeParameters>
     private jiraClient: JiraClient | undefined;
     private authManager: AuthManager;
     private cacheManager: CacheManager;
+    private confirmationHelper: ConfirmationHelper;
 
     constructor(
         private context: vscode.ExtensionContext,
         authManager: AuthManager,
-        cacheManager: CacheManager
+        cacheManager: CacheManager,
+        configManager: ConfigManager
     ) {
         this.authManager = authManager;
         this.cacheManager = cacheManager;
+        this.confirmationHelper = new ConfirmationHelper(context, configManager);
     }
 
     /**
@@ -59,6 +66,9 @@ export class LogTimeTool implements vscode.LanguageModelTool<ILogTimeParameters>
 
     /**
      * Executes the tool to log work time to a Jira issue.
+     *
+     * Feature 8.8: Confirmation Flows
+     * Requests user confirmation before logging time.
      */
     async invoke(
         options: vscode.LanguageModelToolInvocationOptions<ILogTimeParameters>,
@@ -92,6 +102,22 @@ export class LogTimeTool implements vscode.LanguageModelTool<ILogTimeParameters>
                 return new vscode.LanguageModelToolResult([
                     new vscode.LanguageModelTextPart(
                         'Error: Failed to parse time format. Please use formats like "2h", "30m", or "2h 30m".'
+                    )
+                ]);
+            }
+
+            // Feature 8.8: Request confirmation before logging time
+            const confirmationDesc = description ? `\n\nDescription: ${description}` : '';
+            const approved = await this.confirmationHelper.requestConfirmation(
+                'timeLogging',
+                `Log ${timeSpent} to ${issueKey}?${confirmationDesc}`,
+                'This operation will add a worklog entry to the issue in Jira.'
+            );
+
+            if (!approved) {
+                return new vscode.LanguageModelToolResult([
+                    new vscode.LanguageModelTextPart(
+                        `Time logging cancelled by user. No time was logged to ${issueKey}.`
                     )
                 ]);
             }

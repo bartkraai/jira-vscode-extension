@@ -135,6 +135,31 @@ export class ConfigManager {
   }
 
   /**
+   * Get confirmation requirements for Copilot tool operations
+   *
+   * Returns an object specifying which tool operations require user confirmation
+   * before execution. This helps prevent accidental destructive operations.
+   *
+   * @returns Object with confirmation settings for each tool operation
+   *          Default: { statusChange: true, timeLogging: true, createSubtask: false, linkPR: false, addComment: false }
+   */
+  get requireConfirmation(): {
+    statusChange: boolean;
+    timeLogging: boolean;
+    createSubtask: boolean;
+    linkPR: boolean;
+    addComment: boolean;
+  } {
+    return this.config.get('requireConfirmation', {
+      statusChange: true,
+      timeLogging: true,
+      createSubtask: false,
+      linkPR: false,
+      addComment: false
+    });
+  }
+
+  /**
    * Get the maximum number of issues to fetch from Jira
    *
    * This limits the number of issues returned by API queries to prevent
@@ -374,6 +399,7 @@ export class ConfigManager {
         : `${this.autoRefreshInterval} seconds`,
       contextFileLocation: this.contextFileLocation,
       enableCopilotTools: this.enableCopilotTools,
+      requireConfirmation: this.requireConfirmation,
       maxIssues: this.maxIssues,
       useDummyData: this.useDummyData
     };

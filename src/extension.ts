@@ -129,7 +129,7 @@ export function activate(context: vscode.ExtensionContext) {
 			outputChannel.appendLine('Language Model Tool registered: jira_add_comment');
 
 			// Feature 8.4: Update Status Tool
-			const updateStatusTool = new UpdateStatusTool(context, authManager, cacheManager);
+			const updateStatusTool = new UpdateStatusTool(context, authManager, cacheManager, configManager);
 			context.subscriptions.push(
 				vscode.lm.registerTool('jira_update_status', updateStatusTool)
 			);
@@ -150,7 +150,7 @@ export function activate(context: vscode.ExtensionContext) {
 			outputChannel.appendLine('Language Model Tool registered: jira_create_subtask');
 
 			// Feature 8.7: Log Time Tool
-			const logTimeTool = new LogTimeTool(context, authManager, cacheManager);
+			const logTimeTool = new LogTimeTool(context, authManager, cacheManager, configManager);
 			context.subscriptions.push(
 				vscode.lm.registerTool('jira_log_time', logTimeTool)
 			);

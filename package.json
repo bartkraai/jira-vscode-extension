@@ -175,6 +175,39 @@
           "default": true,
           "description": "Enable Copilot tools integration"
         },
+        "jiraExtension.requireConfirmation": {
+          "type": "object",
+          "default": {
+            "statusChange": true,
+            "timeLogging": true,
+            "createSubtask": false,
+            "linkPR": false,
+            "addComment": false
+          },
+          "properties": {
+            "statusChange": {
+              "type": "boolean",
+              "description": "Require confirmation before changing issue status"
+            },
+            "timeLogging": {
+              "type": "boolean",
+              "description": "Require confirmation before logging time"
+            },
+            "createSubtask": {
+              "type": "boolean",
+              "description": "Require confirmation before creating subtasks"
+            },
+            "linkPR": {
+              "type": "boolean",
+              "description": "Require confirmation before linking pull requests"
+            },
+            "addComment": {
+              "type": "boolean",
+              "description": "Require confirmation before adding comments"
+            }
+          },
+          "description": "Configure which Copilot tool operations require user confirmation"
+        },
         "jiraExtension.maxIssues": {
           "type": "number",
           "default": 100,

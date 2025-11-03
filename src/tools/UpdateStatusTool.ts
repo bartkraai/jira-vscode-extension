@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { JiraClient } from '../api/JiraClient';
 import { AuthManager } from '../api/AuthManager';
 import { CacheManager } from '../api/CacheManager';
+import { ConfigManager } from '../config/ConfigManager';
+import { ConfirmationHelper } from '../utils/confirmationHelper';
 
 /**
  * Interface for the update_status tool parameters
@@ -14,19 +16,25 @@ export interface IUpdateStatusParameters {
 /**
  * Language Model Tool for updating the status of Jira issues.
  * This tool allows Copilot to transition issues between different statuses.
+ *
+ * Feature 8.8: Confirmation Flows
+ * Status changes are considered destructive operations and require user confirmation by default.
  */
 export class UpdateStatusTool implements vscode.LanguageModelTool<IUpdateStatusParameters> {
     private jiraClient: JiraClient | undefined;
     private authManager: AuthManager;
     private cacheManager: CacheManager;
+    private confirmationHelper: ConfirmationHelper;
 
     constructor(
         private context: vscode.ExtensionContext,
         authManager: AuthManager,
-        cacheManager: CacheManager
+        cacheManager: CacheManager,
+        configManager: ConfigManager
     ) {
         this.authManager = authManager;
         this.cacheManager = cacheManager;
+        this.confirmationHelper = new ConfirmationHelper(context, configManager);
     }
 
     /**
@@ -46,6 +54,9 @@ export class UpdateStatusTool implements vscode.LanguageModelTool<IUpdateStatusP
 
     /**
      * Executes the tool to update an issue's status.
+     *
+     * Feature 8.8: Confirmation Flows
+     * Requests user confirmation before executing the status change.
      */
     async invoke(
         options: vscode.LanguageModelToolInvocationOptions<IUpdateStatusParameters>,
@@ -67,6 +78,21 @@ export class UpdateStatusTool implements vscode.LanguageModelTool<IUpdateStatusP
                 return new vscode.LanguageModelToolResult([
                     new vscode.LanguageModelTextPart(
                         'Error: status is required and cannot be empty.'
+                    )
+                ]);
+            }
+
+            // Feature 8.8: Request confirmation before status change
+            const approved = await this.confirmationHelper.requestConfirmation(
+                'statusChange',
+                `Update ${issueKey} status to "${status}"?`,
+                'This operation will change the issue status in Jira.'
+            );
+
+            if (!approved) {
+                return new vscode.LanguageModelToolResult([
+                    new vscode.LanguageModelTextPart(
+                        `Status change cancelled by user. ${issueKey} was not updated.`
                     )
                 ]);
             }
