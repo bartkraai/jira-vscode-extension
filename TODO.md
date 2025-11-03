@@ -69,7 +69,7 @@
 
 - [x] Feature 7.1: Context Menu Integration
 - [x] Feature 7.2: Fetch Full Issue Details
-- [ ] Feature 7.3: Markdown Generation
+- [x] Feature 7.3: Markdown Generation
 - [ ] Feature 7.4: File Creation and Storage
 - [ ] Feature 7.5: Copilot Context Integration
 - [ ] Feature 7.6: User Notifications
