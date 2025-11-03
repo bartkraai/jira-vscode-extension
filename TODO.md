@@ -78,7 +78,7 @@
 
 ## Epic 8 & 9: Copilot Tools Integration
 
-- [ ] Feature 8.1: Language Model Tools API Research
+- [x] Feature 8.1: Language Model Tools API Research
 - [ ] Feature 8.2: Tools Provider Implementation
 - [ ] Feature 8.3: Tool: Add Comment
 - [ ] Feature 8.4: Tool: Update Status

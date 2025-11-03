@@ -15,6 +15,7 @@ import { registerRefreshCommand, registerOpenIssueCommand, registerCopyIssueKeyC
 import { registerInvestigateWithCopilotCommand, registerInvestigateTicketCommand } from './commands/copilot';
 import { JiraClient } from './api/JiraClient';
 import { DummyJiraClient } from './api/DummyJiraClient';
+import { GetIssueInfoTool } from './tools/GetIssueInfoTool';
 
 /**
  * Global extension context - accessible to all modules
@@ -103,6 +104,21 @@ export function activate(context: vscode.ExtensionContext) {
 	// Register Copilot integration commands
 	context.subscriptions.push(registerInvestigateWithCopilotCommand(context, authManager, configManager, cacheManager));
 	context.subscriptions.push(registerInvestigateTicketCommand(context, authManager, configManager, cacheManager));
+
+	// Register Language Model Tools (Feature 8.1 - Proof of Concept)
+	// Only register if Copilot tools are enabled in configuration
+	if (configManager.enableCopilotTools) {
+		try {
+			const getIssueInfoTool = new GetIssueInfoTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_get_issue_info', getIssueInfoTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_get_issue_info');
+		} catch (error) {
+			outputChannel.appendLine(`Failed to register Language Model Tool: ${error}`);
+			// Don't fail extension activation if tool registration fails
+		}
+	}
 
 	// Register toggle dummy data command
 	context.subscriptions.push(

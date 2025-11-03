@@ -299,6 +299,26 @@
         "mac": "cmd+shift+f",
         "when": "view == jiraMyWork"
       }
+    ],
+    "languageModelTools": [
+      {
+        "name": "jira_get_issue_info",
+        "displayName": "Get Jira Issue Info",
+        "modelDescription": "Retrieves detailed information about a specific Jira issue by its key (e.g., PROJ-123). Use this tool when you need to get the current status, description, assignee, priority, or other details about a Jira ticket. The issue key must be provided in the format PROJECT-NUMBER.",
+        "userDescription": "Fetches information about a Jira issue",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_issue",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "issueKey": {
+              "type": "string",
+              "description": "The Jira issue key (e.g., PROJ-123)"
+            }
+          },
+          "required": ["issueKey"]
+        }
+      }
     ]
   },
   "scripts": {
