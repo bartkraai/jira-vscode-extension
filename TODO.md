@@ -38,7 +38,7 @@
 - [x] Feature 4.4: Manual Refresh
 - [x] Feature 4.5: Auto Refresh
 - [x] Feature 4.6: Loading States
-- [ ] Feature 4.7: Empty State
+- [x] Feature 4.7: Empty State
 - [ ] Feature 4.8: View in Jira Action
 - [ ] Feature 4.9: Copy Ticket ID Action
 

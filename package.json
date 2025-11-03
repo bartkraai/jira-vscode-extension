@@ -113,6 +113,12 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "jiraMyWork",
+        "contents": "No issues assigned to you.\n[Refresh](command:jira.refresh)\n[Configure Extension](command:jira.configure)"
+      }
+    ],
     "menus": {
       "view/title": [
         {
