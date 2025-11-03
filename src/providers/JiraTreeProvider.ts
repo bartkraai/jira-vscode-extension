@@ -165,7 +165,8 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 	private filters = {
 		issueTypes: new Set<string>(),
 		priorities: new Set<string>(),
-		sprints: new Set<string>()
+		sprints: new Set<string>(),
+		searchText: ''
 	};
 
 	constructor(
@@ -474,12 +475,14 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 				issueTypes: string[];
 				priorities: string[];
 				sprints: string[];
+				searchText?: string;
 			}>('jira.filters');
 
 			if (saved) {
 				this.filters.issueTypes = new Set(saved.issueTypes || []);
 				this.filters.priorities = new Set(saved.priorities || []);
 				this.filters.sprints = new Set(saved.sprints || []);
+				this.filters.searchText = saved.searchText || '';
 			}
 		} catch (error) {
 			// If loading fails, just use default empty filters
@@ -498,7 +501,8 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 			await this.context.workspaceState.update('jira.filters', {
 				issueTypes: Array.from(this.filters.issueTypes),
 				priorities: Array.from(this.filters.priorities),
-				sprints: Array.from(this.filters.sprints)
+				sprints: Array.from(this.filters.sprints),
+				searchText: this.filters.searchText
 			});
 		} catch (error) {
 			// Saving filters is not critical, just log the error
@@ -509,7 +513,7 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 	/**
 	 * Apply filters to issues
 	 *
-	 * Filters issues based on the current filter state (issue types, priorities, sprints)
+	 * Filters issues based on the current filter state (issue types, priorities, sprints, search text)
 	 *
 	 * @param issues - Array of issues to filter
 	 * @returns Filtered array of issues
@@ -556,8 +560,74 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 				}
 			}
 
+			// Filter by search text
+			if (this.filters.searchText) {
+				const searchLower = this.filters.searchText.toLowerCase();
+
+				// Search in issue key
+				if (issue.key.toLowerCase().includes(searchLower)) {
+					return true;
+				}
+
+				// Search in summary
+				if (issue.fields.summary.toLowerCase().includes(searchLower)) {
+					return true;
+				}
+
+				// Search in description (if available)
+				if (issue.fields.description) {
+					// Handle ADF format description
+					const descText = this.extractTextFromADF(issue.fields.description);
+					if (descText.toLowerCase().includes(searchLower)) {
+						return true;
+					}
+				}
+
+				// No match found
+				return false;
+			}
+
 			return true;
 		});
+	}
+
+	/**
+	 * Extract plain text from Atlassian Document Format (ADF)
+	 *
+	 * @param adf - The ADF object or plain string
+	 * @returns Plain text extracted from the ADF
+	 */
+	private extractTextFromADF(adf: any): string {
+		if (typeof adf === 'string') {
+			return adf;
+		}
+
+		if (!adf || typeof adf !== 'object') {
+			return '';
+		}
+
+		let text = '';
+
+		// If it's an ADF document with content array
+		if (Array.isArray(adf.content)) {
+			for (const node of adf.content) {
+				text += this.extractTextFromADF(node) + ' ';
+			}
+		}
+
+		// If it's a text node
+		if (adf.type === 'text' && adf.text) {
+			text += adf.text + ' ';
+		}
+
+		// Recursively process nested content
+		if (Array.isArray(adf.content)) {
+			for (const node of adf.content) {
+				text += this.extractTextFromADF(node) + ' ';
+			}
+		}
+
+		return text.trim();
 	}
 
 	/**
@@ -725,6 +795,65 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 	}
 
 	/**
+	 * Show input box to search/filter issues
+	 *
+	 * Allows user to enter text to filter issues by key, summary, or description.
+	 * Search is case-insensitive and updates in real-time.
+	 */
+	async searchIssues(): Promise<void> {
+		const searchText = await vscode.window.showInputBox({
+			prompt: 'Search issues by key, summary, or description',
+			placeHolder: 'Enter search text...',
+			value: this.filters.searchText,
+			validateInput: (value) => {
+				// No validation - empty string is valid (clears search)
+				return null;
+			}
+		});
+
+		// If user cancelled, don't change search
+		if (searchText === undefined) {
+			return;
+		}
+
+		// Update search filter
+		this.filters.searchText = searchText.trim();
+
+		// Save filter state
+		await this.saveFilters();
+
+		// Show status message
+		if (this.filters.searchText) {
+			vscode.window.showInformationMessage(`Searching for: "${this.filters.searchText}"`);
+		} else {
+			vscode.window.showInformationMessage('Search cleared');
+		}
+
+		// Refresh tree view
+		this.refresh();
+	}
+
+	/**
+	 * Clear the search filter
+	 *
+	 * Removes the search text filter and refreshes the tree view.
+	 */
+	async clearSearch(): Promise<void> {
+		if (!this.filters.searchText) {
+			vscode.window.showInformationMessage('No active search to clear');
+			return;
+		}
+
+		this.filters.searchText = '';
+
+		// Save filter state
+		await this.saveFilters();
+
+		vscode.window.showInformationMessage('Search cleared');
+		this.refresh();
+	}
+
+	/**
 	 * Clear all filters
 	 *
 	 * Resets all filter state and refreshes the tree view to show all issues.
@@ -734,6 +863,7 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 		this.filters.issueTypes.clear();
 		this.filters.priorities.clear();
 		this.filters.sprints.clear();
+		this.filters.searchText = '';
 
 		// Clear saved filters
 		await this.saveFilters();
@@ -750,6 +880,7 @@ export class JiraTreeProvider implements vscode.TreeDataProvider<TreeItem> {
 	hasActiveFilters(): boolean {
 		return this.filters.issueTypes.size > 0 ||
 			this.filters.priorities.size > 0 ||
-			this.filters.sprints.size > 0;
+			this.filters.sprints.size > 0 ||
+			this.filters.searchText.length > 0;
 	}
 }

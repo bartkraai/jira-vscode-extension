@@ -48,7 +48,7 @@
 - [x] Feature 5.2: Filter by Priority
 - [x] Feature 5.3: Filter by Sprint
 - [x] Feature 5.4: Filter Persistence
-- [ ] Feature 5.5: Search/Filter Input
+- [x] Feature 5.5: Search/Filter Input
 - [ ] Feature 5.6: Change Status Action
 - [ ] Feature 5.7: Add Comment Action
 - [ ] Feature 5.8: Keyboard Shortcuts

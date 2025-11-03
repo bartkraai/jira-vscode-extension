@@ -9,7 +9,7 @@ import { registerAuthenticateCommand, registerClearCredentialsCommand } from './
 import { registerCacheClearCommand, registerCacheStatsCommand } from './commands/cache';
 import { registerConfigureCommand } from './commands/configure';
 import { registerValidateCommand } from './commands/validate';
-import { registerRefreshCommand, registerOpenIssueCommand, registerCopyIssueKeyCommand, registerFilterByIssueTypeCommand, registerFilterByPriorityCommand, registerFilterBySprintCommand, registerClearFiltersCommand } from './commands/treeView';
+import { registerRefreshCommand, registerOpenIssueCommand, registerCopyIssueKeyCommand, registerFilterByIssueTypeCommand, registerFilterByPriorityCommand, registerFilterBySprintCommand, registerClearFiltersCommand, registerSearchIssuesCommand, registerClearSearchCommand } from './commands/treeView';
 
 /**
  * Global extension context - accessible to all modules
@@ -89,6 +89,8 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(registerFilterByPriorityCommand(context, treeProvider));
 	context.subscriptions.push(registerFilterBySprintCommand(context, treeProvider));
 	context.subscriptions.push(registerClearFiltersCommand(context, treeProvider));
+	context.subscriptions.push(registerSearchIssuesCommand(context, treeProvider));
+	context.subscriptions.push(registerClearSearchCommand(context, treeProvider));
 
 	// Register configuration change handler and set callbacks
 	configChangeHandler.setTreeViewRefreshCallback(() => treeProvider.refresh());

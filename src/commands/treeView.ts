@@ -188,7 +188,7 @@ export function registerFilterBySprintCommand(
 /**
  * Register the clear filters command
  *
- * Clears all active filters (issue type, priority, sprint) and
+ * Clears all active filters (issue type, priority, sprint, search) and
  * refreshes the tree view to show all issues.
  *
  * @param context - VS Code extension context
@@ -205,6 +205,56 @@ export function registerClearFiltersCommand(
 		} catch (error) {
 			vscode.window.showErrorMessage(
 				`Failed to clear filters: ${error instanceof Error ? error.message : String(error)}`
+			);
+		}
+	});
+}
+
+/**
+ * Register the search issues command
+ *
+ * Shows an input box for searching issues by key, summary, or description.
+ * The search is case-insensitive and filters the tree view in real-time.
+ *
+ * @param context - VS Code extension context
+ * @param treeProvider - The Jira tree provider instance
+ * @returns Disposable for the command
+ */
+export function registerSearchIssuesCommand(
+	context: vscode.ExtensionContext,
+	treeProvider: JiraTreeProvider
+): vscode.Disposable {
+	return vscode.commands.registerCommand('jira.searchIssues', async () => {
+		try {
+			await treeProvider.searchIssues();
+		} catch (error) {
+			vscode.window.showErrorMessage(
+				`Failed to search issues: ${error instanceof Error ? error.message : String(error)}`
+			);
+		}
+	});
+}
+
+/**
+ * Register the clear search command
+ *
+ * Clears the search text filter and refreshes the tree view
+ * to show all issues (respecting other active filters).
+ *
+ * @param context - VS Code extension context
+ * @param treeProvider - The Jira tree provider instance
+ * @returns Disposable for the command
+ */
+export function registerClearSearchCommand(
+	context: vscode.ExtensionContext,
+	treeProvider: JiraTreeProvider
+): vscode.Disposable {
+	return vscode.commands.registerCommand('jira.clearSearch', async () => {
+		try {
+			await treeProvider.clearSearch();
+		} catch (error) {
+			vscode.window.showErrorMessage(
+				`Failed to clear search: ${error instanceof Error ? error.message : String(error)}`
 			);
 		}
 	});

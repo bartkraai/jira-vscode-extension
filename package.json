@@ -75,6 +75,16 @@
         "command": "jira.clearFilters",
         "title": "Clear Filters",
         "icon": "$(clear-all)"
+      },
+      {
+        "command": "jira.searchIssues",
+        "title": "Search Issues",
+        "icon": "$(search)"
+      },
+      {
+        "command": "jira.clearSearch",
+        "title": "Clear Search",
+        "icon": "$(close)"
       }
     ],
     "configuration": {
@@ -167,6 +177,16 @@
         },
         {
           "command": "jira.clearFilters",
+          "when": "view == jiraMyWork",
+          "group": "navigation"
+        },
+        {
+          "command": "jira.searchIssues",
+          "when": "view == jiraMyWork",
+          "group": "navigation"
+        },
+        {
+          "command": "jira.clearSearch",
           "when": "view == jiraMyWork",
           "group": "navigation"
         }
