@@ -108,6 +108,20 @@ export class ConfigManager {
   }
 
   /**
+   * Get the context file cache expiry time in seconds
+   *
+   * When using "Investigate with Copilot", existing context files are reused
+   * if they are younger than this expiry time. This prevents unnecessary API calls
+   * for recently fetched issue data.
+   *
+   * @returns Cache expiry time in seconds
+   *          Default: 3600 seconds (1 hour)
+   */
+  get contextFileCacheExpiry(): number {
+    return this.config.get<number>('contextFileCacheExpiry', 3600);
+  }
+
+  /**
    * Check if Copilot tools integration is enabled
    *
    * When enabled, the extension provides tools that GitHub Copilot can use

@@ -160,6 +160,11 @@
           "default": ".jira",
           "description": "Directory for Copilot context files"
         },
+        "jiraExtension.contextFileCacheExpiry": {
+          "type": "number",
+          "default": 3600,
+          "description": "Context file cache expiry time in seconds (default: 3600 = 1 hour)"
+        },
         "jiraExtension.enableCopilotTools": {
           "type": "boolean",
           "default": true,

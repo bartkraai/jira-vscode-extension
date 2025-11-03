@@ -6,7 +6,7 @@ import { AuthManager } from '../api/AuthManager';
 import { CacheManager } from '../api/CacheManager';
 import { ConfigManager } from '../config/ConfigManager';
 import { generateContextMarkdown } from '../utils/markdownGenerator';
-import { saveContextFile } from '../utils/contextFileStorage';
+import { saveContextFile, getContextFileAge, getContextFilePath } from '../utils/contextFileStorage';
 
 /**
  * Register the "Investigate with Copilot" command
@@ -29,7 +29,7 @@ export function registerInvestigateWithCopilotCommand(
 ): vscode.Disposable {
 	return vscode.commands.registerCommand(
 		'jira.investigateWithCopilot',
-		async (item: IssueItem) => {
+		async (item: IssueItem, forceRefresh: boolean = false) => {
 			try {
 				if (!item || !item.issue) {
 					vscode.window.showErrorMessage('No issue selected for investigation.');
@@ -37,6 +37,49 @@ export function registerInvestigateWithCopilotCommand(
 				}
 
 				const issueKey = item.issue.key;
+
+				// Feature 7.7 - Check cache before fetching
+				if (!forceRefresh) {
+					const fileAge = await getContextFileAge(issueKey, configManager.contextFileLocation);
+					const cacheExpiryMs = configManager.contextFileCacheExpiry * 1000;
+
+					if (fileAge !== null && fileAge < cacheExpiryMs) {
+						// Use cached file
+						const filePath = await getContextFilePath(issueKey, configManager.contextFileLocation);
+						if (filePath) {
+							await addToCopilotContext(filePath);
+
+							// Show cache age in notification
+							const ageMinutes = Math.floor(fileAge / 60000);
+							const ageHours = Math.floor(ageMinutes / 60);
+							let ageText: string;
+							if (ageHours > 0) {
+								ageText = `${ageHours} hour${ageHours > 1 ? 's' : ''} ago`;
+							} else if (ageMinutes > 0) {
+								ageText = `${ageMinutes} minute${ageMinutes > 1 ? 's' : ''} ago`;
+							} else {
+								ageText = 'just now';
+							}
+
+							const action = await vscode.window.showInformationMessage(
+								`Using cached context for ${issueKey} (updated ${ageText})`,
+								'Open in Jira',
+								'Ask Copilot',
+								'Force Refresh'
+							);
+
+							if (action === 'Open in Jira') {
+								await vscode.commands.executeCommand('jira.openIssue', issueKey);
+							} else if (action === 'Ask Copilot') {
+								await vscode.commands.executeCommand('workbench.action.chat.open');
+							} else if (action === 'Force Refresh') {
+								// Recursively call with force refresh
+								await vscode.commands.executeCommand('jira.investigateWithCopilot', item, true);
+							}
+							return;
+						}
+					}
+				}
 
 				// Show progress notification
 				await vscode.window.withProgress(

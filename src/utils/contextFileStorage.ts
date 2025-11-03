@@ -165,3 +165,35 @@ export async function deleteContextFile(
 
   return false;
 }
+
+/**
+ * Get the age of a context file in milliseconds
+ *
+ * Feature 7.7: Caching Investigation Results
+ *
+ * Returns the age of the context file based on its last modification time.
+ * Returns null if the file doesn't exist.
+ *
+ * @param issueKey - The Jira issue key
+ * @param contextFileLocation - Directory path relative to workspace root
+ * @returns Promise that resolves to age in milliseconds, or null if file doesn't exist
+ */
+export async function getContextFileAge(
+  issueKey: string,
+  contextFileLocation: string
+): Promise<number | null> {
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+  if (!workspaceRoot) {
+    return null;
+  }
+
+  const filePath = path.join(workspaceRoot, contextFileLocation, `${issueKey}.md`);
+
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+
+  const stats = fs.statSync(filePath);
+  const age = Date.now() - stats.mtimeMs;
+  return age;
+}
