@@ -8,6 +8,7 @@ export interface ICreateStoryParameters {
     summary: string;
     description?: string;
     parentKey?: string;
+    customFields?: Record<string, any>;
 }
 
 export class CreateStoryTool implements vscode.LanguageModelTool<ICreateStoryParameters> {
@@ -38,7 +39,7 @@ export class CreateStoryTool implements vscode.LanguageModelTool<ICreateStoryPar
         options: vscode.LanguageModelToolInvocationOptions<ICreateStoryParameters>,
         _token: vscode.CancellationToken
     ): Promise<vscode.LanguageModelToolResult> {
-        const { projectKey, summary, description, parentKey } = options.input;
+        const { projectKey, summary, description, parentKey, customFields } = options.input;
 
         try {
             if (!projectKey || !projectKey.trim()) {
@@ -76,7 +77,8 @@ export class CreateStoryTool implements vscode.LanguageModelTool<ICreateStoryPar
                 summary: summary.trim(),
                 description: description?.trim(),
                 issueType: 'Story',
-                parentKey: parentKey?.trim()
+                parentKey: parentKey?.trim(),
+                customFields
             });
 
             const parentInfo = parentKey ? ` under ${parentKey}` : '';

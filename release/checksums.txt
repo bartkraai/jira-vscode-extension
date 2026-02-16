@@ -1,0 +1,52 @@
+# SHA256 Checksums for 42-Jira-Buddy v0.2.0
+
+## VSIX Package
+```
+2105BC79656B2DFCFE21301A91DB16869350C02C564B109F2D4BD37B1E03EF9E  42-jira-buddy-0.2.0.vsix
+```
+
+## Verification
+
+### Windows PowerShell
+```powershell
+Get-FileHash 42-jira-buddy-0.2.0.vsix -Algorithm SHA256
+```
+
+Expected output:
+```
+Algorithm : SHA256
+Hash      : 2105BC79656B2DFCFE21301A91DB16869350C02C564B109F2D4BD37B1E03EF9E
+Path      : C:\path\to\42-jira-buddy-0.2.0.vsix
+```
+
+### Linux/macOS
+```bash
+shasum -a 256 42-jira-buddy-0.2.0.vsix
+```
+
+Expected output:
+```
+2105bc79656b2dfcfe21301a91db16869350c02c564b109f2d4bd37b1e03ef9e  42-jira-buddy-0.2.0.vsix
+```
+
+## File Information
+
+- **Filename:** 42-jira-buddy-0.2.0.vsix
+- **Size:** 246,821 bytes (241.04 KB)
+- **Created:** February 16, 2026
+- **Build Tool:** @vscode/vsce 3.7.1
+- **Compression:** ZIP (Optimal)
+
+## Package Contents
+
+- Extension code: 440.99 KB (minified)
+- Documentation: ~100 KB
+- Resources: < 1 KB
+- Total files: 57
+
+## Digital Signature
+
+This package was built from commit `4b152e2` in the main branch.
+
+Repository: https://github.com/bartkraai/jira-vscode-extension
+Tag: v0.2.0

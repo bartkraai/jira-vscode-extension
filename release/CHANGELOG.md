@@ -5,42 +5,6 @@ All notable changes to the "42-Jira-Buddy" extension will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] - 2026-02-16
-
-### Added
-- **Comprehensive Custom Fields Support** for all Jira operations:
-  - `jira_get_custom_fields` - New tool to discover available custom fields for any project and issue type
-  - All creation tools now support `customFields` parameter (Bugs, Stories, Tasks, Epics, Subtasks)
-  - Custom field support in bulk update operations
-  - API methods for fetching custom field metadata:
-    - `getCreateMetadata()` - Get all field metadata for issue creation
-    - `getEditMetadata()` - Get editable fields for existing issues
-    - `getCustomFields()` - Extract only custom fields from metadata
-    - `getAllFields()` - List all fields in Jira instance
-    - `updateIssue()` - Update issues including custom field values
-  - Dynamic webview forms automatically include custom fields
-  - Support for all custom field types: text, select, multi-select, number, date, user picker
-  - Validation for required custom fields and allowed values
-  - Caching of custom field metadata for performance
-
-### Enhanced
-- **Data Models** with new interfaces:
-  - `JiraCustomField` - Represents custom field definitions
-  - `JiraCustomFieldsMetadata` - Container for custom fields metadata
-  - `JiraEditMetadata` - Edit metadata for existing issues
-  - `CreateIssueRequest` - Updated to support custom fields
-- **Documentation**:
-  - Added comprehensive Custom Fields Guide (docs/CUSTOM_FIELDS_GUIDE.md)
-  - Usage examples for all custom field types
-  - API reference with detailed examples
-  - Best practices and troubleshooting guide
-
-### Technical
-- Enhanced JiraClient with 5 new methods for custom field operations
-- Updated all 5 creation tools to accept custom fields
-- Improved webview provider with better field type handling
-- Better error messages for custom field validation failures
-
 ## [0.2.0] - 2026-02-16
 
 ### Added

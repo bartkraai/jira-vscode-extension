@@ -10,6 +10,7 @@ export interface ICreateEpicParameters {
     projectKey: string;
     summary: string;
     description?: string;
+    customFields?: Record<string, any>;
 }
 
 /**
@@ -52,7 +53,7 @@ export class CreateEpicTool implements vscode.LanguageModelTool<ICreateEpicParam
         options: vscode.LanguageModelToolInvocationOptions<ICreateEpicParameters>,
         _token: vscode.CancellationToken
     ): Promise<vscode.LanguageModelToolResult> {
-        const { projectKey, summary, description } = options.input;
+        const { projectKey, summary, description, customFields } = options.input;
 
         try {
             // Validate parameters
@@ -97,7 +98,8 @@ export class CreateEpicTool implements vscode.LanguageModelTool<ICreateEpicParam
                 projectKey: projectKey.trim(),
                 summary: summary.trim(),
                 description: description?.trim(),
-                issueType: 'Epic'
+                issueType: 'Epic',
+                customFields
             });
 
             return new vscode.LanguageModelToolResult([

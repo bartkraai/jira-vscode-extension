@@ -10,6 +10,9 @@ import {
   JiraTransition,
   JiraComment,
   JiraCreateMetadata,
+  JiraEditMetadata,
+  JiraCustomField,
+  JiraCustomFieldsMetadata,
   IssueContext
 } from '../models/jira';
 import { CacheManager, CacheTTL } from './CacheManager';
@@ -822,57 +825,6 @@ export class JiraClient {
   }
 
   /**
-   * Fetch create metadata for dynamic form building
-   *
-   * This endpoint returns detailed information about what fields are available,
-   * required, and their allowed values when creating issues.
-   *
-   * @param projectKey - The project key (e.g., 'PROJ')
-   * @param issueType - The issue type name (e.g., 'Bug', 'Story')
-   * @param useCache - Whether to use cached results (default: true)
-   * @returns Promise with JiraCreateMetadata object
-   * @throws JiraNotFoundError if the project or issue type doesn't exist
-   * @throws JiraAuthenticationError if authentication fails
-   */
-  async getCreateMetadata(projectKey: string, issueType: string, useCache: boolean = true): Promise<JiraCreateMetadata> {
-    const cacheKey = `createMetadata:${projectKey}:${issueType}`;
-
-    // Check cache first
-    if (useCache) {
-      const cached = this.cache.get<JiraCreateMetadata>(cacheKey);
-      if (cached) {
-        return cached;
-      }
-    }
-
-    try {
-      const response = await this.request<JiraCreateMetadata>(
-        'GET',
-        '/issue/createmeta',
-        {
-          projectKeys: projectKey,
-          issuetypeNames: issueType,
-          expand: 'projects.issuetypes.fields'
-        }
-      );
-
-      // Cache the results
-      this.cache.set(cacheKey, response, CacheTTL.CREATE_METADATA);
-
-      return response;
-    } catch (error) {
-      if (error instanceof JiraAPIError) {
-        if (error.statusCode === 404) {
-          throw new JiraNotFoundError(`Project '${projectKey}' or issue type '${issueType}' not found. Please verify the values.`);
-        } else if (error.statusCode === 401) {
-          throw new JiraAuthenticationError('Authentication failed while fetching create metadata. Please verify your credentials.');
-        }
-      }
-      throw error;
-    }
-  }
-
-  /**
    * Convert plain text to Atlassian Document Format (ADF)
    *
    * @param text - Plain text to convert
@@ -1498,6 +1450,263 @@ export class JiraClient {
     } catch (error) {
       if (error instanceof JiraAPIError && error.statusCode === 401) {
         throw new JiraAuthenticationError('Authentication failed while bulk updating issues. Please verify your credentials.');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get create metadata for a project and issue type
+   * This includes all available fields and their configurations, including custom fields
+   *
+   * @param projectKey - The project key (e.g., 'PROJ')
+   * @param issueTypeName - The issue type name (e.g., 'Story', 'Bug', 'Task')
+   * @param useCache - Whether to use cached results (default: true)
+   * @returns Promise with JiraCreateMetadata
+   * @throws JiraNotFoundError if the project or issue type doesn't exist
+   * @throws JiraAuthenticationError if authentication fails
+   */
+  async getCreateMetadata(
+    projectKey: string,
+    issueTypeName: string,
+    useCache: boolean = true
+  ): Promise<JiraCreateMetadata> {
+    const cacheKey = `createMetadata:${projectKey}:${issueTypeName}`;
+
+    // Check cache first
+    if (useCache) {
+      const cached = this.cache.get<JiraCreateMetadata>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
+    try {
+      const response = await this.request<JiraCreateMetadata>(
+        'GET',
+        '/issue/createmeta',
+        {
+          projectKeys: projectKey,
+          issuetypeNames: issueTypeName,
+          expand: 'projects.issuetypes.fields'
+        }
+      );
+
+      // Cache the results (1 hour TTL since metadata rarely changes)
+      this.cache.set(cacheKey, response, CacheTTL.PROJECTS);
+
+      return response;
+    } catch (error) {
+      if (error instanceof JiraAPIError) {
+        if (error.statusCode === 404) {
+          throw new JiraNotFoundError(
+            `Create metadata not found for project '${projectKey}' and issue type '${issueTypeName}'.`
+          );
+        } else if (error.statusCode === 401) {
+          throw new JiraAuthenticationError(
+            'Authentication failed while fetching create metadata. Please verify your credentials.'
+          );
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get edit metadata for an existing issue
+   * This shows what fields can be edited and their current configurations
+   *
+   * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
+   * @param useCache - Whether to use cached results (default: true)
+   * @returns Promise with JiraEditMetadata
+   * @throws JiraNotFoundError if the issue doesn't exist
+   * @throws JiraAuthenticationError if authentication fails
+   */
+  async getEditMetadata(issueKey: string, useCache: boolean = true): Promise<JiraEditMetadata> {
+    const cacheKey = `editMetadata:${issueKey}`;
+
+    // Check cache first
+    if (useCache) {
+      const cached = this.cache.get<JiraEditMetadata>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
+    try {
+      const response = await this.request<JiraEditMetadata>(
+        'GET',
+        `/issue/${issueKey}/editmeta`
+      );
+
+      // Cache the results (15 minutes TTL)
+      this.cache.set(cacheKey, response, CacheTTL.TRANSITIONS);
+
+      return response;
+    } catch (error) {
+      if (error instanceof JiraAPIError) {
+        if (error.statusCode === 404) {
+          throw new JiraNotFoundError(`Issue '${issueKey}' not found. Please verify the issue key.`);
+        } else if (error.statusCode === 401) {
+          throw new JiraAuthenticationError(
+            'Authentication failed while fetching edit metadata. Please verify your credentials.'
+          );
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get custom fields for a specific project and issue type
+   * Extracts only custom fields from the create metadata
+   *
+   * @param projectKey - The project key (e.g., 'PROJ')
+   * @param issueTypeName - The issue type name (e.g., 'Story', 'Bug', 'Task')
+   * @param useCache - Whether to use cached results (default: true)
+   * @returns Promise with JiraCustomFieldsMetadata
+   * @throws JiraNotFoundError if the project or issue type doesn't exist
+   * @throws JiraAuthenticationError if authentication fails
+   */
+  async getCustomFields(
+    projectKey: string,
+    issueTypeName: string,
+    useCache: boolean = true
+  ): Promise<JiraCustomFieldsMetadata> {
+    const metadata = await this.getCreateMetadata(projectKey, issueTypeName, useCache);
+
+    // Find the project and issue type
+    const project = metadata.projects.find(p => p.key === projectKey);
+    if (!project) {
+      throw new JiraNotFoundError(`Project '${projectKey}' not found in metadata.`);
+    }
+
+    const issueType = project.issuetypes.find(
+      it => it.name.toLowerCase() === issueTypeName.toLowerCase()
+    );
+    if (!issueType) {
+      throw new JiraNotFoundError(
+        `Issue type '${issueTypeName}' not found for project '${projectKey}'.`
+      );
+    }
+
+    // Extract custom fields (fields that start with 'customfield_')
+    const customFields: JiraCustomField[] = [];
+
+    for (const [fieldId, fieldConfig] of Object.entries(issueType.fields)) {
+      if (fieldId.startsWith('customfield_')) {
+        customFields.push({
+          fieldId,
+          name: fieldConfig.name,
+          schema: fieldConfig.schema,
+          required: fieldConfig.required,
+          allowedValues: fieldConfig.allowedValues,
+          defaultValue: fieldConfig.defaultValue,
+          hasDefaultValue: fieldConfig.hasDefaultValue,
+          operations: fieldConfig.operations,
+          autoCompleteUrl: fieldConfig.autoCompleteUrl
+        });
+      }
+    }
+
+    return {
+      projectKey,
+      issueType: issueTypeName,
+      customFields
+    };
+  }
+
+  /**
+   * Get all fields (system and custom) for a Jira instance
+   * Useful for discovering field IDs and names across the entire instance
+   *
+   * @param useCache - Whether to use cached results (default: true)
+   * @returns Promise with array of field definitions
+   * @throws JiraAuthenticationError if authentication fails
+   */
+  async getAllFields(useCache: boolean = true): Promise<Array<{
+    id: string;
+    name: string;
+    custom: boolean;
+    schema?: any;
+    clauseNames?: string[];
+  }>> {
+    const cacheKey = 'allFields';
+
+    // Check cache first
+    if (useCache) {
+      const cached = this.cache.get<any[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
+    try {
+      const response = await this.request<any[]>('GET', '/field');
+
+      // Cache the results (1 hour TTL since fields rarely change)
+      this.cache.set(cacheKey, response, CacheTTL.PROJECTS);
+
+      return response;
+    } catch (error) {
+      if (error instanceof JiraAPIError && error.statusCode === 401) {
+        throw new JiraAuthenticationError(
+          'Authentication failed while fetching fields. Please verify your credentials.'
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Update an issue with custom fields
+   *
+   * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
+   * @param fields - Fields to update (including custom fields)
+   * @param notifyUsers - Whether to notify users of the update (default: true)
+   * @returns Promise that resolves when update is complete
+   * @throws JiraNotFoundError if the issue doesn't exist
+   * @throws JiraAuthenticationError if authentication fails
+   * @throws JiraAPIError if field validation fails
+   */
+  async updateIssue(
+    issueKey: string,
+    fields: Record<string, any>,
+    notifyUsers: boolean = true
+  ): Promise<void> {
+    const payload = {
+      fields
+    };
+
+    try {
+      await this.request(
+        'PUT',
+        `/issue/${issueKey}`,
+        payload,
+        { params: { notifyUsers } }
+      );
+
+      // Invalidate caches
+      this.cache.invalidate(`issueDetails:${issueKey}`);
+      this.cache.invalidate('assignedIssues:*');
+    } catch (error) {
+      if (error instanceof JiraAPIError) {
+        if (error.statusCode === 404) {
+          throw new JiraNotFoundError(`Issue '${issueKey}' not found. Please verify the issue key.`);
+        } else if (error.statusCode === 401) {
+          throw new JiraAuthenticationError(
+            'Authentication failed while updating issue. Please verify your credentials.'
+          );
+        } else if (error.statusCode === 400) {
+          // Extract field validation errors if available
+          const fieldErrors = error.response?.errors;
+          if (fieldErrors) {
+            const errorMessages = Object.entries(fieldErrors)
+              .map(([field, message]) => `${field}: ${message}`)
+              .join(', ');
+            throw new JiraAPIError(`Field validation failed: ${errorMessages}`, 400, error.response);
+          }
+        }
       }
       throw error;
     }

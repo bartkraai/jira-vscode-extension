@@ -3,9 +3,14 @@ import { JiraClient } from '../api/JiraClient';
 import { AuthManager } from '../api/AuthManager';
 import { CacheManager } from '../api/CacheManager';
 
+/**
+ * Interface for the bulk_update tool parameters
+ * Allows updating multiple issues with the same field values, including custom fields
+ */
 export interface IBulkUpdateParameters {
     issueKeys: string[];
-    fields: any;
+    /** Fields to update (supports both system and custom fields). Custom fields use format: customfield_10001 */
+    fields: Record<string, any>;
 }
 
 export class BulkUpdateTool implements vscode.LanguageModelTool<IBulkUpdateParameters> {

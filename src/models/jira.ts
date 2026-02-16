@@ -213,6 +213,50 @@ export interface CreateIssueRequest {
   customFields?: Record<string, any>;
 }
 
+/**
+ * Custom field definition from Jira metadata
+ */
+export interface JiraCustomField {
+  /** Field ID (e.g., 'customfield_10001') */
+  fieldId: string;
+  /** Display name */
+  name: string;
+  /** Field type schema information */
+  schema: {
+    type: string;
+    custom?: string;
+    customId?: number;
+    items?: string;
+    system?: string;
+  };
+  /** Whether the field is required */
+  required: boolean;
+  /** Allowed values for select/multi-select fields */
+  allowedValues?: Array<{
+    id?: string;
+    value?: string;
+    self?: string;
+    [key: string]: any;
+  }>;
+  /** Default value if any */
+  defaultValue?: any;
+  /** Whether the field has a default value */
+  hasDefaultValue?: boolean;
+  /** Available operations */
+  operations?: string[];
+  /** Auto-complete URL for dynamic fields */
+  autoCompleteUrl?: string;
+}
+
+/**
+ * Custom fields metadata for a specific project and issue type
+ */
+export interface JiraCustomFieldsMetadata {
+  projectKey: string;
+  issueType: string;
+  customFields: JiraCustomField[];
+}
+
 export interface CreateIssueResponse {
   id: string;
   key: string;
@@ -244,8 +288,26 @@ export interface JiraCreateMetadata {
         operations?: string[];
         hasDefaultValue?: boolean;
         defaultValue?: any;
+        autoCompleteUrl?: string;
       }>;
     }>;
+  }>;
+}
+
+/**
+ * Edit metadata for updating existing issues
+ */
+export interface JiraEditMetadata {
+  fields: Record<string, {
+    required: boolean;
+    schema: any;
+    name: string;
+    key: string;
+    allowedValues?: any[];
+    operations?: string[];
+    hasDefaultValue?: boolean;
+    defaultValue?: any;
+    autoCompleteUrl?: string;
   }>;
 }
 

@@ -36,6 +36,7 @@ import { AddLabelsTool } from './tools/AddLabelsTool';
 import { SetSprintTool } from './tools/SetSprintTool';
 import { GetTransitionsTool } from './tools/GetTransitionsTool';
 import { BulkUpdateTool } from './tools/BulkUpdateTool';
+import { GetCustomFieldsTool } from './tools/GetCustomFieldsTool';
 
 /**
  * Global extension context - accessible to all modules
@@ -279,6 +280,13 @@ export function activate(context: vscode.ExtensionContext) {
 				vscode.lm.registerTool('jira_bulk_update', bulkUpdateTool)
 			);
 			outputChannel.appendLine('Language Model Tool registered: jira_bulk_update');
+
+			// Get Custom Fields Tool
+			const getCustomFieldsTool = new GetCustomFieldsTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_get_custom_fields', getCustomFieldsTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_get_custom_fields');
 		} catch (error) {
 			outputChannel.appendLine(`Failed to register Language Model Tools: ${error}`);
 			// Don't fail extension activation if tool registration fails

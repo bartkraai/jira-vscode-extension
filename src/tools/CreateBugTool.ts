@@ -8,6 +8,7 @@ export interface ICreateBugParameters {
     summary: string;
     description?: string;
     priority?: string;
+    customFields?: Record<string, any>;
 }
 
 export class CreateBugTool implements vscode.LanguageModelTool<ICreateBugParameters> {
@@ -38,7 +39,7 @@ export class CreateBugTool implements vscode.LanguageModelTool<ICreateBugParamet
         options: vscode.LanguageModelToolInvocationOptions<ICreateBugParameters>,
         _token: vscode.CancellationToken
     ): Promise<vscode.LanguageModelToolResult> {
-        const { projectKey, summary, description, priority } = options.input;
+        const { projectKey, summary, description, priority, customFields } = options.input;
 
         try {
             if (!projectKey || !projectKey.trim()) {
@@ -76,7 +77,8 @@ export class CreateBugTool implements vscode.LanguageModelTool<ICreateBugParamet
                 summary: summary.trim(),
                 description: description?.trim(),
                 issueType: 'Bug',
-                priority: priority?.trim()
+                priority: priority?.trim(),
+                customFields
             });
 
             return new vscode.LanguageModelToolResult([

@@ -10,6 +10,7 @@ export interface ICreateSubtaskParameters {
     parentKey: string;
     summary: string;
     description?: string;
+    customFields?: Record<string, any>;
 }
 
 /**
@@ -52,7 +53,7 @@ export class CreateSubtaskTool implements vscode.LanguageModelTool<ICreateSubtas
         options: vscode.LanguageModelToolInvocationOptions<ICreateSubtaskParameters>,
         _token: vscode.CancellationToken
     ): Promise<vscode.LanguageModelToolResult> {
-        const { parentKey, summary, description } = options.input;
+        const { parentKey, summary, description, customFields } = options.input;
 
         try {
             // Validate parameters
@@ -112,7 +113,8 @@ export class CreateSubtaskTool implements vscode.LanguageModelTool<ICreateSubtas
                 summary: summary.trim(),
                 description: description?.trim(),
                 issueType: 'Sub-task',
-                parentKey: parentKey.trim()
+                parentKey: parentKey.trim(),
+                customFields
             });
 
             return new vscode.LanguageModelToolResult([

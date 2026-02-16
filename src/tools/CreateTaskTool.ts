@@ -11,6 +11,7 @@ export interface ICreateTaskParameters {
     summary: string;
     description?: string;
     parentKey?: string;
+    customFields?: Record<string, any>;
 }
 
 /**
@@ -54,7 +55,7 @@ export class CreateTaskTool implements vscode.LanguageModelTool<ICreateTaskParam
         options: vscode.LanguageModelToolInvocationOptions<ICreateTaskParameters>,
         _token: vscode.CancellationToken
     ): Promise<vscode.LanguageModelToolResult> {
-        const { projectKey, summary, description, parentKey } = options.input;
+        const { projectKey, summary, description, parentKey, customFields } = options.input;
 
         try {
             // Validate parameters
@@ -112,7 +113,8 @@ export class CreateTaskTool implements vscode.LanguageModelTool<ICreateTaskParam
                 summary: summary.trim(),
                 description: description?.trim(),
                 issueType: 'Task',
-                parentKey: parentKey?.trim()
+                parentKey: parentKey?.trim(),
+                customFields
             });
 
             const parentInfo = parentKey ? ` under ${parentKey}` : '';
