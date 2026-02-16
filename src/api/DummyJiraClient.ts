@@ -83,6 +83,8 @@ export class DummyJiraClient {
    */
   async getAssignedIssues(options?: {
     maxResults?: number;
+    nextPageToken?: string;
+    /** @deprecated Use nextPageToken instead */
     startAt?: number;
     jql?: string;
   }): Promise<JiraIssue[]> {
@@ -97,7 +99,7 @@ export class DummyJiraClient {
     // Get all issues assigned to current user (user[0])
     let issues = DummyDataGenerator.getAllIssues();
 
-    // Apply pagination
+    // Apply pagination (dummy client still uses simple offset for simulation)
     const startAt = options?.startAt || 0;
     const maxResults = options?.maxResults || 100;
     const paginatedIssues = issues.slice(startAt, startAt + maxResults);

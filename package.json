@@ -2,8 +2,12 @@
   "name": "42-jira-buddy",
   "displayName": "42-Jira-Buddy",
   "description": "Your friendly Jira companion for VS Code with GitHub Copilot support",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "your-publisher-name",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-publisher-name/jira-vscode-extension"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -337,7 +341,7 @@
       {
         "name": "jira_get_issue_info",
         "displayName": "Get Jira Issue Info",
-        "modelDescription": "Retrieves detailed information about a specific Jira issue by its key (e.g., PROJ-123). Use this tool when you need to get the current status, description, assignee, priority, or other details about a Jira ticket. The issue key must be provided in the format PROJECT-NUMBER.",
+        "modelDescription": "Retrieves comprehensive information about a Jira issue including status, assignee, priority, description, comments, and history. Use when investigating an issue, before making updates, or when providing context about a ticket. Input: issue key (e.g., PROJ-123). Output: Full issue details with metadata.",
         "userDescription": "Fetches information about a Jira issue",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "jira_issue",
@@ -355,7 +359,7 @@
       {
         "name": "jira_add_comment",
         "displayName": "Add Comment to Jira Issue",
-        "modelDescription": "Adds a comment to a Jira issue. Use this tool when you need to document progress, add context, or respond to discussion on a Jira ticket. The comment will be posted as the authenticated user.",
+        "modelDescription": "Posts a comment to a Jira issue as the authenticated user. Use when documenting work progress, providing updates, adding clarifications, or responding to discussions. Comments are visible to all team members with access to the issue. Input: issue key + comment text. Output: Confirmation of posted comment.",
         "userDescription": "Adds a comment to a Jira issue",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "jira_comment",
@@ -377,7 +381,7 @@
       {
         "name": "jira_update_status",
         "displayName": "Update Jira Issue Status",
-        "modelDescription": "Updates the status of a Jira issue by transitioning it to a new status (e.g., 'In Progress', 'Done', 'To Do'). Use this tool when you need to change the workflow state of an issue. The tool will find the appropriate transition based on the target status name. Requires user confirmation before execution.",
+        "modelDescription": "Transitions a Jira issue to a different workflow status (e.g., 'To Do' → 'In Progress' → 'Done'). Use when updating work state, marking issues complete, or moving tickets through workflow. Automatically finds valid transitions. Requires user confirmation. Input: issue key + target status name. Output: Confirmation with new status.",
         "userDescription": "Updates the status of a Jira issue",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "jira_status",
@@ -399,7 +403,7 @@
       {
         "name": "jira_link_pr",
         "displayName": "Link Pull Request to Jira Issue",
-        "modelDescription": "Links a pull request to a Jira issue by adding a remote link. Use this tool when you need to associate a GitHub pull request with a Jira ticket for traceability. Provide the PR URL and the issue will show the link in its development panel.",
+        "modelDescription": "Associates a GitHub/GitLab/Bitbucket pull request with a Jira issue for development traceability. Use when connecting code changes to tickets. The PR appears in the issue's development panel. Enables tracking implementation status. Input: issue key + PR URL + optional title. Output: Confirmation of link creation.",
         "userDescription": "Links a pull request to a Jira issue",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "jira_pr",
@@ -425,7 +429,7 @@
       {
         "name": "jira_create_subtask",
         "displayName": "Create Jira Subtask",
-        "modelDescription": "Creates a new subtask under an existing Jira issue. Use this tool when you need to break down work into smaller tasks. The subtask will be created in the same project as the parent issue.",
+        "modelDescription": "Creates a subtask under an existing parent issue for breaking down complex work into manageable pieces. Subtasks inherit the parent's project. Use when decomposing stories/tasks/bugs. Helps with detailed task tracking. Input: parent issue key + summary + optional description. Output: New subtask key.",
         "userDescription": "Creates a subtask under a Jira issue",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "jira_subtask",
@@ -451,7 +455,7 @@
       {
         "name": "jira_log_time",
         "displayName": "Log Time to Jira Issue",
-        "modelDescription": "Logs work time to a Jira issue. Use this tool when you need to record time spent on a ticket. Supports formats like '2h', '30m', '2h 30m', '1d' (8 hours), '1w' (40 hours). Optionally include a work description. Requires user confirmation before execution.",
+        "modelDescription": "Records time spent working on a Jira issue for time tracking and reporting. Accepts Jira time formats: '2h', '30m', '2h 30m', '1d' (8h), '1w' (40h). Optional work description. Use for timesheets and effort tracking. Requires user confirmation. Input: issue key + time + description. Output: Confirmation of logged time.",
         "userDescription": "Logs work time to a Jira issue",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "jira_time",
@@ -472,6 +476,411 @@
             }
           },
           "required": ["issueKey", "timeSpent"]
+        }
+      },
+      {
+        "name": "jira_create_epic",
+        "displayName": "Create Jira Epic",
+        "modelDescription": "Creates a high-level epic for organizing related stories and tasks under a major initiative or feature. Use when planning large features or long-term work. Epics serve as parent containers for stories/tasks. Input: project key + summary + optional description. Output: New epic key and details.",
+        "userDescription": "Creates a new epic in a Jira project",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_epic",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectKey": {
+              "type": "string",
+              "description": "The project key (e.g., PROJ)"
+            },
+            "summary": {
+              "type": "string",
+              "description": "The epic summary/title"
+            },
+            "description": {
+              "type": "string",
+              "description": "Optional description for the epic"
+            }
+          },
+          "required": [
+            "projectKey",
+            "summary"
+          ]
+        }
+      },
+      {
+        "name": "jira_create_task",
+        "displayName": "Create Jira Task",
+        "modelDescription": "Creates a task issue for general work items. Can be standalone or linked to a parent (epic/story). Use for action items, technical tasks, or non-story work. Provides flexibility in work organization. Input: project key + summary + optional description + optional parent key. Output: New task key.",
+        "userDescription": "Creates a new task in a Jira project",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_task",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectKey": {
+              "type": "string",
+              "description": "The project key (e.g., PROJ)"
+            },
+            "summary": {
+              "type": "string",
+              "description": "The task summary/title"
+            },
+            "description": {
+              "type": "string",
+              "description": "Optional description for the task"
+            },
+            "parentKey": {
+              "type": "string",
+              "description": "Optional parent issue key (e.g., PROJ-123) to link the task to an epic or story"
+            }
+          },
+          "required": [
+            "projectKey",
+            "summary"
+          ]
+        }
+      },
+      {
+        "name": "jira_list_epics",
+        "displayName": "List Jira Epics",
+        "modelDescription": "Retrieves all epics in a project with their keys, summaries, statuses, and assignees. Use when exploring project structure, finding parent epics for linking, or getting overview of major initiatives. Helpful for project planning and navigation. Input: project key + optional max results. Output: List of epics with metadata.",
+        "userDescription": "Lists all epics in a Jira project",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_epics",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectKey": {
+              "type": "string",
+              "description": "The project key (e.g., PROJ)"
+            },
+            "maxResults": {
+              "type": "number",
+              "description": "Maximum number of epics to return (default: 100)"
+            }
+          },
+          "required": [
+            "projectKey"
+          ]
+        }
+      },
+      {
+        "name": "jira_assign_issue",
+        "displayName": "Assign Jira Issue",
+        "modelDescription": "Changes the assignee of an issue or removes assignment. Use when delegating work, taking ownership, or unassigning completed work. Requires user accountId for assignment. Set unassign=true to clear assignee. Input: issue key + accountId OR unassign flag. Output: Confirmation with new assignee.",
+        "userDescription": "Assigns or unassigns a Jira issue",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_assign",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "issueKey": {
+              "type": "string",
+              "description": "The Jira issue key (e.g., PROJ-123)"
+            },
+            "accountId": {
+              "type": "string",
+              "description": "The account ID of the user to assign to"
+            },
+            "unassign": {
+              "type": "boolean",
+              "description": "Set to true to unassign the issue"
+            }
+          },
+          "required": [
+            "issueKey"
+          ]
+        }
+      },
+      {
+        "name": "jira_set_priority",
+        "displayName": "Set Jira Issue Priority",
+        "modelDescription": "Updates issue priority to reflect urgency and importance (Critical, High, Medium, Low, Trivial). Use when triaging issues, escalating bugs, or adjusting work priority. Affects team's work ordering and attention. Input: issue key + priority name. Output: Confirmation with new priority.",
+        "userDescription": "Sets the priority of a Jira issue",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_priority",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "issueKey": {
+              "type": "string",
+              "description": "The Jira issue key (e.g., PROJ-123)"
+            },
+            "priority": {
+              "type": "string",
+              "description": "The priority level (e.g., 'Critical', 'High', 'Medium', 'Low')"
+            }
+          },
+          "required": [
+            "issueKey",
+            "priority"
+          ]
+        }
+      },
+      {
+        "name": "jira_add_watcher",
+        "displayName": "Add Watcher to Jira Issue",
+        "modelDescription": "Subscribes a user to receive notifications for all changes to an issue. Use when involving stakeholders, keeping team informed, or adding observers. Watchers get updates without being assigned. Input: issue key + user accountId. Output: Confirmation of watcher addition.",
+        "userDescription": "Adds a watcher to a Jira issue",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_watch",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "issueKey": {
+              "type": "string",
+              "description": "The Jira issue key (e.g., PROJ-123)"
+            },
+            "accountId": {
+              "type": "string",
+              "description": "The account ID of the user to add as watcher"
+            }
+          },
+          "required": [
+            "issueKey",
+            "accountId"
+          ]
+        }
+      },
+      {
+        "name": "jira_search_issues",
+        "displayName": "Search Jira Issues",
+        "modelDescription": "Performs advanced issue search using JQL (Jira Query Language). Use for finding issues by any criteria: status, assignee, priority, labels, dates, custom fields. Examples: 'project = PROJ AND status = Open', 'assignee = currentUser()', 'priority = High AND updated >= -7d'. Input: JQL query + max results. Output: Matching issues list.",
+        "userDescription": "Search for Jira issues using JQL",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_search",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "jql": {
+              "type": "string",
+              "description": "The JQL query string (e.g., 'project = PROJ AND status = Open')"
+            },
+            "maxResults": {
+              "type": "number",
+              "description": "Maximum number of results to return (default: 50)"
+            }
+          },
+          "required": [
+            "jql"
+          ]
+        }
+      },
+      {
+        "name": "jira_get_project",
+        "displayName": "Get Jira Project Details",
+        "modelDescription": "Fetches project metadata: name, description, lead, project type, and settings. Use when validating project keys, understanding project context, or finding project leads. Helpful before creating issues or during project exploration. Input: project key. Output: Complete project details.",
+        "userDescription": "Gets details about a Jira project",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_project_info",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectKey": {
+              "type": "string",
+              "description": "The project key (e.g., PROJ)"
+            }
+          },
+          "required": [
+            "projectKey"
+          ]
+        }
+      },
+      {
+        "name": "jira_create_story",
+        "displayName": "Create Jira Story",
+        "modelDescription": "Creates a user story for agile development workflows. Stories represent user-facing features or requirements. Can be linked to parent epic for organization. Use for product development and sprint planning. Input: project key + summary + optional description + optional parent epic. Output: New story key.",
+        "userDescription": "Creates a new story in a Jira project",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_story",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectKey": {
+              "type": "string",
+              "description": "The project key (e.g., PROJ)"
+            },
+            "summary": {
+              "type": "string",
+              "description": "The story summary/title"
+            },
+            "description": {
+              "type": "string",
+              "description": "Optional description for the story"
+            },
+            "parentKey": {
+              "type": "string",
+              "description": "Optional parent epic key (e.g., PROJ-123)"
+            }
+          },
+          "required": [
+            "projectKey",
+            "summary"
+          ]
+        }
+      },
+      {
+        "name": "jira_create_bug",
+        "displayName": "Create Jira Bug",
+        "modelDescription": "Creates a bug/defect issue for reporting problems, errors, or unexpected behavior. Optional priority setting (Critical, High, Medium, Low). Use for defect tracking and quality management. Helps prioritize fixes. Input: project key + summary + optional description + optional priority. Output: New bug key.",
+        "userDescription": "Creates a new bug in a Jira project",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_bug",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectKey": {
+              "type": "string",
+              "description": "The project key (e.g., PROJ)"
+            },
+            "summary": {
+              "type": "string",
+              "description": "The bug summary/title"
+            },
+            "description": {
+              "type": "string",
+              "description": "Optional description for the bug"
+            },
+            "priority": {
+              "type": "string",
+              "description": "Optional priority (e.g., 'Critical', 'High', 'Medium', 'Low')"
+            }
+          },
+          "required": [
+            "projectKey",
+            "summary"
+          ]
+        }
+      },
+      {
+        "name": "jira_link_issues",
+        "displayName": "Link Jira Issues",
+        "modelDescription": "Establishes directional relationship between two issues: Blocks (dependency), Relates (connection), Duplicates (same issue), Clones (copied from), etc. Use for showing dependencies, related work, or duplicate tracking. Helps visualize issue relationships. Input: inward issue + outward issue + link type. Output: Confirmation of link.",
+        "userDescription": "Links two Jira issues together",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_link",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "inwardIssueKey": {
+              "type": "string",
+              "description": "The inward issue key (e.g., PROJ-123)"
+            },
+            "outwardIssueKey": {
+              "type": "string",
+              "description": "The outward issue key (e.g., PROJ-456)"
+            },
+            "linkType": {
+              "type": "string",
+              "description": "The link type (e.g., 'Blocks', 'Relates', 'Duplicates')"
+            }
+          },
+          "required": [
+            "inwardIssueKey",
+            "outwardIssueKey",
+            "linkType"
+          ]
+        }
+      },
+      {
+        "name": "jira_add_labels",
+        "displayName": "Add Labels to Jira Issue",
+        "modelDescription": "Tags an issue with one or more labels for categorization, filtering, and organization. Labels enable custom grouping (e.g., 'frontend', 'urgent', 'technical-debt'). Use for flexible issue classification. Labels are searchable. Input: issue key + array of labels. Output: Confirmation with updated labels.",
+        "userDescription": "Adds labels to a Jira issue",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_label",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "issueKey": {
+              "type": "string",
+              "description": "The Jira issue key (e.g., PROJ-123)"
+            },
+            "labels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Array of labels to add (e.g., ['frontend', 'urgent'])"
+            }
+          },
+          "required": [
+            "issueKey",
+            "labels"
+          ]
+        }
+      },
+      {
+        "name": "jira_set_sprint",
+        "displayName": "Move Issue to Sprint",
+        "modelDescription": "Assigns an issue to a specific sprint for agile sprint planning. Use when organizing backlog, planning iterations, or moving work between sprints. Requires sprint ID. Enables sprint-based work tracking. Input: issue key + sprint ID. Output: Confirmation of sprint assignment.",
+        "userDescription": "Moves an issue to a sprint",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_sprint_move",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "issueKey": {
+              "type": "string",
+              "description": "The Jira issue key (e.g., PROJ-123)"
+            },
+            "sprintId": {
+              "type": "number",
+              "description": "The sprint ID"
+            }
+          },
+          "required": [
+            "issueKey",
+            "sprintId"
+          ]
+        }
+      },
+      {
+        "name": "jira_get_transitions",
+        "displayName": "Get Available Transitions",
+        "modelDescription": "Lists all valid workflow status transitions currently available for an issue based on its current state and project workflow. Use before updating status to determine possible next states. Workflow-aware. Input: issue key. Output: Array of available transitions with IDs and names.",
+        "userDescription": "Gets available status transitions for an issue",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_transitions",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "issueKey": {
+              "type": "string",
+              "description": "The Jira issue key (e.g., PROJ-123)"
+            }
+          },
+          "required": [
+            "issueKey"
+          ]
+        }
+      },
+      {
+        "name": "jira_bulk_update",
+        "displayName": "Bulk Update Jira Issues",
+        "modelDescription": "Applies the same field updates to multiple issues in one operation. Use for mass changes: bulk priority updates, batch label additions, multi-issue assignments, etc. Efficient for managing many issues. Reduces API calls. Input: array of issue keys + fields object. Output: Confirmation with update count.",
+        "userDescription": "Bulk updates multiple Jira issues",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_bulk",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "issueKeys": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Array of issue keys to update (e.g., ['PROJ-123', 'PROJ-456'])"
+            },
+            "fields": {
+              "type": "object",
+              "description": "Fields to update (JSON object)"
+            }
+          },
+          "required": [
+            "issueKeys",
+            "fields"
+          ]
         }
       }
     ]

@@ -21,6 +21,7 @@ import { CacheManager, CacheTTL } from './CacheManager';
  * Uses Basic Authentication with email and API token.
  *
  * @see https://developer.atlassian.com/cloud/jira/platform/rest/v2/intro/
+ * @see https://developer.atlassian.com/changelog/#CHANGE-2046 (JQL search migration)
  */
 export class JiraClient {
   private baseUrl: string;
@@ -37,7 +38,7 @@ export class JiraClient {
    */
   constructor(instanceUrl: string, email: string, apiToken: string, cacheManager?: CacheManager) {
     // Ensure instanceUrl doesn't have trailing slash
-    this.baseUrl = `${instanceUrl.replace(/\/$/, '')}/rest/api/2`;
+    this.baseUrl = `${instanceUrl.replace(/\/$/, '')}/rest/api/3`;
 
     // Create Base64 encoded auth string
     const authString = Buffer.from(`${email}:${apiToken}`).toString('base64');
@@ -258,21 +259,21 @@ export class JiraClient {
    *
    * @param options - Optional query parameters
    * @param options.maxResults - Maximum number of issues to return (default: 100)
-   * @param options.startAt - Starting index for pagination (default: 0)
+   * @param options.nextPageToken - Token for cursor-based pagination (replaces startAt)
    * @param options.fields - Array of field names to include (default: all common fields)
    * @param options.useCache - Whether to use cached results (default: true)
    * @returns Promise with array of JiraIssue objects
    */
   async getAssignedIssues(options?: {
     maxResults?: number;
-    startAt?: number;
+    nextPageToken?: string;
     fields?: string[];
     useCache?: boolean;
   }): Promise<JiraIssue[]> {
     const useCache = options?.useCache !== false;
 
     // Generate cache key based on parameters
-    const cacheKey = `assignedIssues:${options?.maxResults || 100}:${options?.startAt || 0}`;
+    const cacheKey = `assignedIssues:${options?.maxResults || 100}:${options?.nextPageToken || 'first'}`;
 
     // Check cache first
     if (useCache) {
@@ -299,15 +300,19 @@ export class JiraClient {
       'customfield_10016' // Sprint field (may vary by instance)
     ];
 
-    const params = {
+    const requestBody: Record<string, any> = {
       jql,
       maxResults: options?.maxResults || 100,
-      startAt: options?.startAt || 0,
       fields: options?.fields || defaultFields
     };
 
+    // Use nextPageToken for cursor-based pagination (new enhanced search endpoint)
+    if (options?.nextPageToken) {
+      requestBody.nextPageToken = options.nextPageToken;
+    }
+
     try {
-      const response = await this.request<JiraSearchResponse>('GET', '/search', params);
+      const response = await this.request<JiraSearchResponse>('POST', '/search/jql', requestBody);
 
       // Cache the results
       this.cache.set(cacheKey, response.issues, CacheTTL.ASSIGNED_ISSUES);
@@ -316,6 +321,68 @@ export class JiraClient {
     } catch (error) {
       if (error instanceof JiraAPIError && error.statusCode === 401) {
         throw new JiraAuthenticationError('Authentication failed while fetching issues. Please verify your credentials.');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch all epics for a specific project
+   *
+   * @param projectKey - The project key (e.g., 'PROJ')
+   * @param options - Optional query parameters
+   * @param options.maxResults - Maximum number of epics to return (default: 100)
+   * @param options.useCache - Whether to use cached results (default: true)
+   * @returns Promise with array of JiraIssue objects representing epics
+   */
+  async getEpics(projectKey: string, options?: {
+    maxResults?: number;
+    useCache?: boolean;
+  }): Promise<JiraIssue[]> {
+    const useCache = options?.useCache !== false;
+
+    // Generate cache key based on parameters
+    const cacheKey = `epics:${projectKey}:${options?.maxResults || 100}`;
+
+    // Check cache first
+    if (useCache) {
+      const cached = this.cache.get<JiraIssue[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
+    // JQL to find all epics in the project
+    const jql = `project = ${projectKey} AND issuetype = Epic ORDER BY created DESC`;
+
+    const defaultFields = [
+      'summary',
+      'status',
+      'priority',
+      'issuetype',
+      'updated',
+      'created',
+      'assignee',
+      'reporter',
+      'description'
+    ];
+
+    const requestBody: Record<string, any> = {
+      jql,
+      maxResults: options?.maxResults || 100,
+      fields: defaultFields
+    };
+
+    try {
+      const response = await this.request<JiraSearchResponse>('POST', '/search/jql', requestBody);
+
+      // Cache the results
+      this.cache.set(cacheKey, response.issues, CacheTTL.ASSIGNED_ISSUES);
+
+      return response.issues;
+    } catch (error) {
+      if (error instanceof JiraAPIError && error.statusCode === 401) {
+        throw new JiraAuthenticationError('Authentication failed while fetching epics. Please verify your credentials.');
       }
       throw error;
     }
@@ -1146,6 +1213,291 @@ export class JiraClient {
         } else if (error.statusCode === 400) {
           throw new JiraAPIError(`Failed to log time: ${error.message}`, 400, error.response);
         }
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Assign an issue to a user
+   *
+   * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
+   * @param accountId - The account ID of the user to assign (use null to unassign)
+   * @returns Promise that resolves when assignment is complete
+   * @throws JiraNotFoundError if the issue doesn't exist
+   * @throws JiraAuthenticationError if authentication fails
+   */
+  async assignIssue(issueKey: string, accountId: string | null): Promise<void> {
+    const payload = accountId === null ? { accountId: null } : { accountId };
+
+    try {
+      await this.request('PUT', `/issue/${issueKey}/assignee`, payload);
+
+      // Invalidate caches
+      this.cache.invalidate(`issueDetails:${issueKey}`);
+      this.cache.invalidate('assignedIssues:*');
+    } catch (error) {
+      if (error instanceof JiraAPIError) {
+        if (error.statusCode === 404) {
+          throw new JiraNotFoundError(`Issue '${issueKey}' not found. Please verify the issue key.`);
+        } else if (error.statusCode === 401) {
+          throw new JiraAuthenticationError('Authentication failed while assigning issue. Please verify your credentials.');
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Set the priority of an issue
+   *
+   * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
+   * @param priorityName - The priority name (e.g., 'Critical', 'High', 'Medium', 'Low')
+   * @returns Promise that resolves when priority is set
+   * @throws JiraNotFoundError if the issue doesn't exist
+   * @throws JiraAuthenticationError if authentication fails
+   */
+  async setPriority(issueKey: string, priorityName: string): Promise<void> {
+    const payload = {
+      fields: {
+        priority: { name: priorityName }
+      }
+    };
+
+    try {
+      await this.request('PUT', `/issue/${issueKey}`, payload);
+
+      // Invalidate caches
+      this.cache.invalidate(`issueDetails:${issueKey}`);
+    } catch (error) {
+      if (error instanceof JiraAPIError) {
+        if (error.statusCode === 404) {
+          throw new JiraNotFoundError(`Issue '${issueKey}' not found. Please verify the issue key.`);
+        } else if (error.statusCode === 401) {
+          throw new JiraAuthenticationError('Authentication failed while setting priority. Please verify your credentials.');
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Add a watcher to an issue
+   *
+   * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
+   * @param accountId - The account ID of the user to add as watcher
+   * @returns Promise that resolves when watcher is added
+   * @throws JiraNotFoundError if the issue doesn't exist
+   * @throws JiraAuthenticationError if authentication fails
+   */
+  async addWatcher(issueKey: string, accountId: string): Promise<void> {
+    try {
+      await this.request('POST', `/issue/${issueKey}/watchers`, `"${accountId}"`);
+
+      // Invalidate cache
+      this.cache.invalidate(`issueDetails:${issueKey}`);
+    } catch (error) {
+      if (error instanceof JiraAPIError) {
+        if (error.statusCode === 404) {
+          throw new JiraNotFoundError(`Issue '${issueKey}' not found. Please verify the issue key.`);
+        } else if (error.statusCode === 401) {
+          throw new JiraAuthenticationError('Authentication failed while adding watcher. Please verify your credentials.');
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Search for issues using JQL
+   *
+   * @param jql - The JQL query string
+   * @param options - Optional query parameters
+   * @returns Promise with array of JiraIssue objects
+   */
+  async searchIssues(jql: string, options?: {
+    maxResults?: number;
+    fields?: string[];
+    useCache?: boolean;
+  }): Promise<JiraIssue[]> {
+    const useCache = options?.useCache !== false;
+    const cacheKey = `search:${jql}:${options?.maxResults || 100}`;
+
+    if (useCache) {
+      const cached = this.cache.get<JiraIssue[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
+    const defaultFields = [
+      'summary',
+      'status',
+      'priority',
+      'issuetype',
+      'updated',
+      'created',
+      'assignee',
+      'reporter',
+      'description'
+    ];
+
+    const requestBody = {
+      jql,
+      maxResults: options?.maxResults || 100,
+      fields: options?.fields || defaultFields
+    };
+
+    try {
+      const response = await this.request<JiraSearchResponse>('POST', '/search/jql', requestBody);
+      this.cache.set(cacheKey, response.issues, CacheTTL.ASSIGNED_ISSUES);
+      return response.issues;
+    } catch (error) {
+      if (error instanceof JiraAPIError && error.statusCode === 401) {
+        throw new JiraAuthenticationError('Authentication failed while searching issues. Please verify your credentials.');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get detailed information about a project
+   *
+   * @param projectKey - The project key (e.g., 'PROJ')
+   * @param useCache - Whether to use cached results (default: true)
+   * @returns Promise with JiraProject object
+   */
+  async getProjectDetails(projectKey: string, useCache: boolean = true): Promise<JiraProject> {
+    const cacheKey = `projectDetails:${projectKey}`;
+
+    if (useCache) {
+      const cached = this.cache.get<JiraProject>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
+    try {
+      const response = await this.request<JiraProject>('GET', `/project/${projectKey}`);
+      this.cache.set(cacheKey, response, CacheTTL.PROJECTS);
+      return response;
+    } catch (error) {
+      if (error instanceof JiraAPIError) {
+        if (error.statusCode === 404) {
+          throw new JiraNotFoundError(`Project '${projectKey}' not found. Please verify the project key.`);
+        } else if (error.statusCode === 401) {
+          throw new JiraAuthenticationError('Authentication failed while fetching project details. Please verify your credentials.');
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Link two issues together
+   *
+   * @param inwardIssueKey - The inward issue key
+   * @param outwardIssueKey - The outward issue key
+   * @param linkType - The link type (e.g., 'Blocks', 'Relates', 'Duplicates')
+   * @returns Promise that resolves when link is created
+   */
+  async linkIssues(inwardIssueKey: string, outwardIssueKey: string, linkType: string): Promise<void> {
+    const payload = {
+      type: { name: linkType },
+      inwardIssue: { key: inwardIssueKey },
+      outwardIssue: { key: outwardIssueKey }
+    };
+
+    try {
+      await this.request('POST', '/issueLink', payload);
+
+      // Invalidate caches for both issues
+      this.cache.invalidate(`issueDetails:${inwardIssueKey}`);
+      this.cache.invalidate(`issueDetails:${outwardIssueKey}`);
+    } catch (error) {
+      if (error instanceof JiraAPIError && error.statusCode === 401) {
+        throw new JiraAuthenticationError('Authentication failed while linking issues. Please verify your credentials.');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Add labels to an issue
+   *
+   * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
+   * @param labels - Array of labels to add
+   * @returns Promise that resolves when labels are added
+   */
+  async addLabels(issueKey: string, labels: string[]): Promise<void> {
+    const payload = {
+      update: {
+        labels: labels.map(label => ({ add: label }))
+      }
+    };
+
+    try {
+      await this.request('PUT', `/issue/${issueKey}`, payload);
+      this.cache.invalidate(`issueDetails:${issueKey}`);
+    } catch (error) {
+      if (error instanceof JiraAPIError) {
+        if (error.statusCode === 404) {
+          throw new JiraNotFoundError(`Issue '${issueKey}' not found. Please verify the issue key.`);
+        } else if (error.statusCode === 401) {
+          throw new JiraAuthenticationError('Authentication failed while adding labels. Please verify your credentials.');
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Move an issue to a sprint
+   *
+   * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
+   * @param sprintId - The sprint ID
+   * @returns Promise that resolves when issue is moved
+   */
+  async moveToSprint(issueKey: string, sprintId: number): Promise<void> {
+    const payload = {
+      issues: [issueKey]
+    };
+
+    try {
+      await this.request('POST', `/sprint/${sprintId}/issue`, payload);
+      this.cache.invalidate(`issueDetails:${issueKey}`);
+    } catch (error) {
+      if (error instanceof JiraAPIError && error.statusCode === 401) {
+        throw new JiraAuthenticationError('Authentication failed while moving issue to sprint. Please verify your credentials.');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Bulk update multiple issues
+   *
+   * @param issueKeys - Array of issue keys to update
+   * @param fields - Fields to update
+   * @returns Promise that resolves when update is complete
+   */
+  async bulkUpdateIssues(issueKeys: string[], fields: any): Promise<void> {
+    const payload = {
+      issueIds: issueKeys,
+      ...fields
+    };
+
+    try {
+      await this.request('POST', '/issue/bulk', payload);
+
+      // Invalidate caches for all affected issues
+      issueKeys.forEach(key => {
+        this.cache.invalidate(`issueDetails:${key}`);
+      });
+      this.cache.invalidate('assignedIssues:*');
+    } catch (error) {
+      if (error instanceof JiraAPIError && error.statusCode === 401) {
+        throw new JiraAuthenticationError('Authentication failed while bulk updating issues. Please verify your credentials.');
       }
       throw error;
     }

@@ -53,6 +53,7 @@ export interface JiraProject {
     '32x32': string;
     '48x48': string;
   };
+  lead?: JiraUser;
   issueTypes?: JiraIssueType[];
 }
 
@@ -181,12 +182,22 @@ export interface JiraIssueDetails extends JiraIssue {
   };
 }
 
+/**
+ * Response from the enhanced JQL search endpoint (GET/POST /rest/api/2/search/jql)
+ * @see https://developer.atlassian.com/cloud/jira/platform/rest/v2/api-group-issue-search/#api-rest-api-2-search-jql-get
+ */
 export interface JiraSearchResponse {
-  expand: string;
-  startAt: number;
-  maxResults: number;
-  total: number;
   issues: JiraIssue[];
+  nextPageToken?: string;
+  isLast?: boolean;
+  /** @deprecated Provided for backward compatibility; may not be present in new endpoint responses */
+  expand?: string;
+  /** @deprecated Use nextPageToken-based pagination instead */
+  startAt?: number;
+  /** @deprecated Use nextPageToken-based pagination instead */
+  maxResults?: number;
+  /** @deprecated May not be available in new endpoint; use /search/approximate-count if needed */
+  total?: number;
 }
 
 export interface CreateIssueRequest {

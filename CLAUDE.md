@@ -17,20 +17,21 @@ This is **42-Jira-Buddy**, a VS Code extension that provides seamless integratio
 
 ### Jira REST API Version
 
-**We use Jira REST API v2** (not v3)
+**We use Jira REST API v3** (latest version)
 
-- Base URL: `https://{instance}.atlassian.net/rest/api/2`
-- V2 is more stable and widely documented
-- V3 has breaking changes and incomplete feature parity
-- All API client code should target v2 endpoints
+- Base URL: `https://{instance}.atlassian.net/rest/api/3`
+- V3 is the current recommended version
+- V3 provides better support for Atlassian Document Format (ADF)
+- V2 and V3 have feature parity, but v3 is future-proof
+- All API client code targets v3 endpoints
 
 Example:
 ```typescript
 // Correct
-const baseUrl = `${instanceUrl}/rest/api/2`;
+const baseUrl = `${instanceUrl}/rest/api/3`;
 
-// Incorrect
-const baseUrl = `${instanceUrl}/rest/api/3`; // Don't use v3
+// Note: v2 is still supported but v3 is recommended
+const oldBaseUrl = `${instanceUrl}/rest/api/2`; // Legacy
 ```
 
 ### Authentication & Security

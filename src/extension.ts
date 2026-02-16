@@ -21,6 +21,21 @@ import { UpdateStatusTool } from './tools/UpdateStatusTool';
 import { LinkPRTool } from './tools/LinkPRTool';
 import { CreateSubtaskTool } from './tools/CreateSubtaskTool';
 import { LogTimeTool } from './tools/LogTimeTool';
+import { CreateEpicTool } from './tools/CreateEpicTool';
+import { CreateTaskTool } from './tools/CreateTaskTool';
+import { ListEpicsTool } from './tools/ListEpicsTool';
+import { AssignIssueTool } from './tools/AssignIssueTool';
+import { SetPriorityTool } from './tools/SetPriorityTool';
+import { AddWatcherTool } from './tools/AddWatcherTool';
+import { SearchIssuesTool } from './tools/SearchIssuesTool';
+import { GetProjectTool } from './tools/GetProjectTool';
+import { CreateStoryTool } from './tools/CreateStoryTool';
+import { CreateBugTool } from './tools/CreateBugTool';
+import { LinkIssuesTool } from './tools/LinkIssuesTool';
+import { AddLabelsTool } from './tools/AddLabelsTool';
+import { SetSprintTool } from './tools/SetSprintTool';
+import { GetTransitionsTool } from './tools/GetTransitionsTool';
+import { BulkUpdateTool } from './tools/BulkUpdateTool';
 
 /**
  * Global extension context - accessible to all modules
@@ -155,6 +170,115 @@ export function activate(context: vscode.ExtensionContext) {
 				vscode.lm.registerTool('jira_log_time', logTimeTool)
 			);
 			outputChannel.appendLine('Language Model Tool registered: jira_log_time');
+
+			// Create Epic Tool
+			const createEpicTool = new CreateEpicTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_create_epic', createEpicTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_create_epic');
+
+			// Create Task Tool
+			const createTaskTool = new CreateTaskTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_create_task', createTaskTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_create_task');
+
+			// List Epics Tool
+			const listEpicsTool = new ListEpicsTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_list_epics', listEpicsTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_list_epics');
+
+			// HIGH PRIORITY TOOLS
+
+			// Assign Issue Tool
+			const assignIssueTool = new AssignIssueTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_assign_issue', assignIssueTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_assign_issue');
+
+			// Set Priority Tool
+			const setPriorityTool = new SetPriorityTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_set_priority', setPriorityTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_set_priority');
+
+			// Add Watcher Tool
+			const addWatcherTool = new AddWatcherTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_add_watcher', addWatcherTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_add_watcher');
+
+			// Search Issues Tool
+			const searchIssuesTool = new SearchIssuesTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_search_issues', searchIssuesTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_search_issues');
+
+			// Get Project Tool
+			const getProjectTool = new GetProjectTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_get_project', getProjectTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_get_project');
+
+			// MEDIUM PRIORITY TOOLS
+
+			// Create Story Tool
+			const createStoryTool = new CreateStoryTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_create_story', createStoryTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_create_story');
+
+			// Create Bug Tool
+			const createBugTool = new CreateBugTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_create_bug', createBugTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_create_bug');
+
+			// Link Issues Tool
+			const linkIssuesTool = new LinkIssuesTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_link_issues', linkIssuesTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_link_issues');
+
+			// Add Labels Tool
+			const addLabelsTool = new AddLabelsTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_add_labels', addLabelsTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_add_labels');
+
+			// Set Sprint Tool
+			const setSprintTool = new SetSprintTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_set_sprint', setSprintTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_set_sprint');
+
+			// Get Transitions Tool
+			const getTransitionsTool = new GetTransitionsTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_get_transitions', getTransitionsTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_get_transitions');
+
+			// Bulk Update Tool
+			const bulkUpdateTool = new BulkUpdateTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_bulk_update', bulkUpdateTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_bulk_update');
 		} catch (error) {
 			outputChannel.appendLine(`Failed to register Language Model Tools: ${error}`);
 			// Don't fail extension activation if tool registration fails
