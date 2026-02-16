@@ -5,6 +5,25 @@ All notable changes to the "42-Jira-Buddy" extension will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-02-16
+
+### Added
+- **Custom Field Allowed Values Discovery**:
+  - `jira_get_custom_field_values` - New tool to retrieve allowed values for select/multi-select custom fields
+  - `getCustomFieldAllowedValues()` - API method to get allowed values by field ID
+  - `getCustomFieldAllowedValuesByName()` - API method to get allowed values by field name (case-insensitive)
+  - Makes it easy to discover what values are valid for custom fields without checking Jira UI
+  - Helps users fill in custom fields correctly with proper IDs and values
+
+### Enhanced
+- **Documentation**:
+  - Added examples for discovering and using custom field allowed values
+  - Updated Custom Fields Guide with new tool and API method documentation
+  - Added troubleshooting tips for custom field value selection
+
+### Fixed
+- Better error messages when custom fields don't have predefined allowed values (free-text fields)
+
 ## [0.3.0] - 2026-02-16
 
 ### Added

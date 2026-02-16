@@ -80,6 +80,45 @@ const allFields = await jiraClient.getAllFields();
 const customFieldsOnly = allFields.filter(f => f.custom);
 ```
 
+#### `getCustomFieldAllowedValues(projectKey, issueTypeName, fieldId, useCache?)`
+Gets allowed values for a specific custom field by field ID.
+
+**Parameters:**
+- `projectKey` - The project key
+- `issueTypeName` - The issue type name
+- `fieldId` - The custom field ID (e.g., 'customfield_10001')
+- `useCache` - Whether to use cached results (default: true)
+
+**Returns:** Array of allowed value objects
+
+**Example:**
+```typescript
+const allowedValues = await jiraClient.getCustomFieldAllowedValues('PROJ', 'Bug', 'customfield_10001');
+allowedValues.forEach(value => {
+  console.log(`${value.value || value.name} (ID: ${value.id})`);
+});
+```
+
+#### `getCustomFieldAllowedValuesByName(projectKey, issueTypeName, fieldName, useCache?)`
+Gets allowed values for a custom field by searching for the field name.
+
+**Parameters:**
+- `projectKey` - The project key
+- `issueTypeName` - The issue type name
+- `fieldName` - The custom field name (case-insensitive, e.g., 'Environment')
+- `useCache` - Whether to use cached results (default: true)
+
+**Returns:** Object with fieldId, name, and allowedValues array
+
+**Example:**
+```typescript
+const fieldInfo = await jiraClient.getCustomFieldAllowedValuesByName('PROJ', 'Bug', 'Environment');
+console.log(`Field: ${fieldInfo.name} (${fieldInfo.fieldId})`);
+fieldInfo.allowedValues.forEach(value => {
+  console.log(`- ${value.value || value.name}`);
+});
+```
+
 #### `updateIssue(issueKey, fields, notifyUsers?)`
 Updates an issue with new field values, including custom fields.
 
@@ -214,7 +253,7 @@ Creates subtasks with optional custom fields.
 - `description` - Optional
 - `customFields` - Optional
 
-#### `GetCustomFieldsTool` (New)
+#### `GetCustomFieldsTool`
 Retrieves custom field metadata for a project and issue type.
 
 **Parameters:**
@@ -234,6 +273,34 @@ User: "What custom fields are available for bugs in project ACME?"
 Copilot uses: jira_get_custom_fields with projectKey='ACME', issueType='Bug'
 Response shows all custom fields with their IDs and allowed values
 ```
+
+#### `GetCustomFieldValuesTool` (New)
+Retrieves allowed values for a specific custom field by name.
+
+**Parameters:**
+- `projectKey` - Required
+- `issueType` - Required
+- `fieldName` - Required (e.g., 'Environment', 'Severity', 'Priority')
+
+**Returns:** Formatted list of allowed values with:
+- Value names and IDs
+- Usage examples
+- Field ID for reference
+
+**Example Usage by Copilot:**
+```
+User: "What values can I use for the Environment field in ACME bugs?"
+Copilot uses: jira_get_custom_field_values with:
+  - projectKey='ACME'
+  - issueType='Bug'
+  - fieldName='Environment'
+Response shows: Production, Staging, Development, etc.
+```
+
+**Why this is useful:**
+- Helps fill in select/multi-select custom fields correctly
+- Shows available options without needing to look at Jira UI
+- Provides the correct IDs to use in customFields parameter
 
 #### `BulkUpdateTool`
 Updates multiple issues at once, supports custom fields.
@@ -414,7 +481,35 @@ customFields.customFields.forEach(field => {
 });
 ```
 
-### Example 3: Update Custom Fields on Existing Issue
+### Example 3: Get Allowed Values for a Custom Field
+
+**Using Copilot:**
+```
+User: "What are the valid values for Environment in PROJ bugs?"
+Copilot calls: jira_get_custom_field_values with:
+  - projectKey='PROJ'
+  - issueType='Bug'
+  - fieldName='Environment'
+Response shows: Production, Staging, Development, Testing
+```
+
+**Using API directly:**
+```typescript
+// By field name (easier)
+const fieldInfo = await jiraClient.getCustomFieldAllowedValuesByName('PROJ', 'Bug', 'Environment');
+console.log(`Field: ${fieldInfo.name} (${fieldInfo.fieldId})`);
+fieldInfo.allowedValues.forEach(value => {
+  console.log(`- ${value.value} (ID: ${value.id})`);
+});
+
+// By field ID (if you know it)
+const values = await jiraClient.getCustomFieldAllowedValues('PROJ', 'Bug', 'customfield_10001');
+values.forEach(value => {
+  console.log(`- ${value.value || value.name}`);
+});
+```
+
+### Example 4: Update Custom Fields on Existing Issue
 
 **Using Copilot:**
 ```

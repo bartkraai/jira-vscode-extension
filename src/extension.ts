@@ -37,6 +37,7 @@ import { SetSprintTool } from './tools/SetSprintTool';
 import { GetTransitionsTool } from './tools/GetTransitionsTool';
 import { BulkUpdateTool } from './tools/BulkUpdateTool';
 import { GetCustomFieldsTool } from './tools/GetCustomFieldsTool';
+import { GetCustomFieldValuesTool } from './tools/GetCustomFieldValuesTool';
 
 /**
  * Global extension context - accessible to all modules
@@ -287,6 +288,13 @@ export function activate(context: vscode.ExtensionContext) {
 				vscode.lm.registerTool('jira_get_custom_fields', getCustomFieldsTool)
 			);
 			outputChannel.appendLine('Language Model Tool registered: jira_get_custom_fields');
+
+			// Get Custom Field Values Tool
+			const getCustomFieldValuesTool = new GetCustomFieldValuesTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_get_custom_field_values', getCustomFieldValuesTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_get_custom_field_values');
 		} catch (error) {
 			outputChannel.appendLine(`Failed to register Language Model Tools: ${error}`);
 			// Don't fail extension activation if tool registration fails

@@ -2,7 +2,7 @@
   "name": "42-jira-buddy",
   "displayName": "42-Jira-Buddy",
   "description": "Your friendly Jira companion for VS Code with GitHub Copilot support",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "your-publisher-name",
   "repository": {
     "type": "git",

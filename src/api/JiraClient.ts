@@ -1659,6 +1659,108 @@ export class JiraClient {
   }
 
   /**
+   * Get allowed values for a specific custom field
+   * This is useful for select/multi-select fields to show users what options are available
+   *
+   * @param projectKey - The project key (e.g., 'PROJ')
+   * @param issueTypeName - The issue type name (e.g., 'Story', 'Bug', 'Task')
+   * @param fieldId - The custom field ID (e.g., 'customfield_10001')
+   * @param useCache - Whether to use cached results (default: true)
+   * @returns Promise with array of allowed values
+   * @throws JiraNotFoundError if the field doesn't exist or has no allowed values
+   * @throws JiraAuthenticationError if authentication fails
+   */
+  async getCustomFieldAllowedValues(
+    projectKey: string,
+    issueTypeName: string,
+    fieldId: string,
+    useCache: boolean = true
+  ): Promise<Array<{
+    id?: string;
+    value?: string;
+    name?: string;
+    self?: string;
+    [key: string]: any;
+  }>> {
+    const customFieldsMetadata = await this.getCustomFields(projectKey, issueTypeName, useCache);
+
+    // Find the specific custom field
+    const customField = customFieldsMetadata.customFields.find(
+      field => field.fieldId === fieldId
+    );
+
+    if (!customField) {
+      throw new JiraNotFoundError(
+        `Custom field '${fieldId}' not found for ${issueTypeName} in project '${projectKey}'.`
+      );
+    }
+
+    if (!customField.allowedValues || customField.allowedValues.length === 0) {
+      throw new JiraNotFoundError(
+        `Custom field '${customField.name}' (${fieldId}) does not have predefined allowed values. ` +
+        `It may be a free-text field or use dynamic values.`
+      );
+    }
+
+    return customField.allowedValues;
+  }
+
+  /**
+   * Search for custom field allowed values by field name
+   * Useful when you know the field name but not the field ID
+   *
+   * @param projectKey - The project key (e.g., 'PROJ')
+   * @param issueTypeName - The issue type name (e.g., 'Story', 'Bug', 'Task')
+   * @param fieldName - The custom field name (case-insensitive, e.g., 'Environment', 'Priority')
+   * @param useCache - Whether to use cached results (default: true)
+   * @returns Promise with object containing field info and allowed values
+   * @throws JiraNotFoundError if the field doesn't exist or has no allowed values
+   * @throws JiraAuthenticationError if authentication fails
+   */
+  async getCustomFieldAllowedValuesByName(
+    projectKey: string,
+    issueTypeName: string,
+    fieldName: string,
+    useCache: boolean = true
+  ): Promise<{
+    fieldId: string;
+    name: string;
+    allowedValues: Array<{
+      id?: string;
+      value?: string;
+      name?: string;
+      self?: string;
+      [key: string]: any;
+    }>;
+  }> {
+    const customFieldsMetadata = await this.getCustomFields(projectKey, issueTypeName, useCache);
+
+    // Find the custom field by name (case-insensitive)
+    const customField = customFieldsMetadata.customFields.find(
+      field => field.name.toLowerCase() === fieldName.toLowerCase()
+    );
+
+    if (!customField) {
+      throw new JiraNotFoundError(
+        `Custom field with name '${fieldName}' not found for ${issueTypeName} in project '${projectKey}'.`
+      );
+    }
+
+    if (!customField.allowedValues || customField.allowedValues.length === 0) {
+      throw new JiraNotFoundError(
+        `Custom field '${customField.name}' (${customField.fieldId}) does not have predefined allowed values. ` +
+        `It may be a free-text field or use dynamic values.`
+      );
+    }
+
+    return {
+      fieldId: customField.fieldId,
+      name: customField.name,
+      allowedValues: customField.allowedValues
+    };
+  }
+
+  /**
    * Update an issue with custom fields
    *
    * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
