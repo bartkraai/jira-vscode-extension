@@ -137,6 +137,55 @@ const authHeader = `Basic ${Buffer.from(`${email}:${apiToken}`).toString('base64
 4. **Dispose properly**: Clean up on `onDidDispose` event
 5. **Theme aware**: Use `var(--vscode-*)` CSS variables
 
+### When Working with Language Model Tools (Copilot Tools)
+
+**CRITICAL: Tools require TWO registrations to be visible to Copilot**
+
+1. **Runtime registration in extension.ts**:
+   ```typescript
+   const myTool = new MyTool(context, authManager, cacheManager);
+   context.subscriptions.push(
+       vscode.lm.registerTool('jira_my_tool', myTool)
+   );
+   ```
+
+2. **Declaration in package.json** (THIS IS REQUIRED):
+   ```json
+   "contributes": {
+     "languageModelTools": [
+       {
+         "name": "jira_my_tool",
+         "displayName": "My Tool Display Name",
+         "modelDescription": "Detailed description for Copilot AI to understand when to use this tool",
+         "userDescription": "Brief user-facing description",
+         "canBeReferencedInPrompt": true,
+         "toolReferenceName": "jira_my",
+         "inputSchema": {
+           "type": "object",
+           "properties": { ... },
+           "required": [...]
+         }
+       }
+     ]
+   }
+   ```
+
+3. **Why both are required**:
+   - Runtime registration: Makes the tool executable
+   - Package.json declaration: Makes the tool **discoverable** by Copilot
+   - **Without package.json declaration, the tool will register successfully but remain invisible to Copilot**
+
+4. **Checklist when adding a new tool**:
+   - [ ] Create tool class implementing `vscode.LanguageModelTool<T>`
+   - [ ] Add import to `extension.ts`
+   - [ ] Register tool in `extension.ts` (inside `if (configManager.enableCopilotTools)` block)
+   - [ ] Add tool declaration to `package.json` `languageModelTools` array
+   - [ ] Rebuild with `npm run package`
+   - [ ] Create new VSIX with `npx @vscode/vsce package`
+   - [ ] Reinstall extension for testing
+   - [ ] Reload VS Code window to activate changes
+   - [ ] Verify tool appears in Copilot's tool list
+
 ## Data Flow Examples
 
 ### Fetching Assigned Issues
@@ -262,6 +311,7 @@ vscode.window.showErrorMessage(
 8. **Don't cache indefinitely**: Set appropriate TTLs on cached data
 9. **Don't forget pagination**: Handle large result sets properly
 10. **Don't skip authentication checks**: Validate credentials before API calls
+11. **Don't forget package.json tool declarations**: Language Model Tools need BOTH runtime registration AND package.json declaration to be visible to Copilot
 
 ## Copilot Tools Integration
 

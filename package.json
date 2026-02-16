@@ -882,6 +882,54 @@
             "fields"
           ]
         }
+      },
+      {
+        "name": "jira_get_custom_fields",
+        "displayName": "Get Jira Custom Fields",
+        "modelDescription": "Retrieves all available custom fields for a specific project and issue type, including field IDs, names, types, required status, and allowed values for select/multi-select fields. Use when discovering what custom fields are available before creating or updating issues. Input: project key + issue type name. Output: List of custom fields with metadata.",
+        "userDescription": "Gets available custom fields for a Jira project and issue type",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_custom_fields",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectKey": {
+              "type": "string",
+              "description": "The project key (e.g., PROJ)"
+            },
+            "issueType": {
+              "type": "string",
+              "description": "The issue type name (e.g., 'Bug', 'Task', 'Story')"
+            }
+          },
+          "required": ["projectKey", "issueType"]
+        }
+      },
+      {
+        "name": "jira_get_custom_field_values",
+        "displayName": "Get Custom Field Allowed Values",
+        "modelDescription": "Retrieves the allowed values for a specific custom field (select or multi-select type) in a project and issue type. Shows value IDs and names that can be used when creating or updating issues. Use when you need to know what options are available for a custom field. Input: project key + issue type + field name. Output: List of allowed values with IDs.",
+        "userDescription": "Gets allowed values for a custom field",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_custom_values",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "projectKey": {
+              "type": "string",
+              "description": "The project key (e.g., PROJ)"
+            },
+            "issueType": {
+              "type": "string",
+              "description": "The issue type name (e.g., 'Bug', 'Task', 'Story')"
+            },
+            "fieldName": {
+              "type": "string",
+              "description": "The custom field name (case-insensitive)"
+            }
+          },
+          "required": ["projectKey", "issueType", "fieldName"]
+        }
       }
     ]
   },
