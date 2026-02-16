@@ -2,7 +2,7 @@
   "name": "42-jira-buddy",
   "displayName": "42-Jira-Buddy",
   "description": "Your friendly Jira companion for VS Code with GitHub Copilot support",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "publisher": "your-publisher-name",
   "repository": {
     "type": "git",
@@ -429,7 +429,7 @@
       {
         "name": "jira_create_subtask",
         "displayName": "Create Jira Subtask",
-        "modelDescription": "Creates a subtask under an existing parent issue for breaking down complex work into manageable pieces. Subtasks inherit the parent's project. Use when decomposing stories/tasks/bugs. Helps with detailed task tracking. Input: parent issue key + summary + optional description. Output: New subtask key.",
+        "modelDescription": "Creates a subtask under an existing parent issue for breaking down complex work into manageable pieces. Subtasks inherit the parent's project. Use when decomposing stories/tasks/bugs. Helps with detailed task tracking. Input: parent issue key + summary + optional description + optional custom fields. Output: New subtask key.",
         "userDescription": "Creates a subtask under a Jira issue",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "jira_subtask",
@@ -447,6 +447,10 @@
             "description": {
               "type": "string",
               "description": "Optional description for the subtask"
+            },
+            "customFields": {
+              "type": "object",
+              "description": "Optional custom fields as key-value pairs. Use jira_get_custom_fields to discover available fields and jira_get_custom_field_values to get allowed values for select fields. Example: {\"customfield_10001\": {\"value\": \"High\"}, \"customfield_10002\": \"Custom text\"}"
             }
           },
           "required": ["parentIssueKey", "summary"]
@@ -481,7 +485,7 @@
       {
         "name": "jira_create_epic",
         "displayName": "Create Jira Epic",
-        "modelDescription": "Creates a high-level epic for organizing related stories and tasks under a major initiative or feature. Use when planning large features or long-term work. Epics serve as parent containers for stories/tasks. Input: project key + summary + optional description. Output: New epic key and details.",
+        "modelDescription": "Creates a high-level epic for organizing related stories and tasks under a major initiative or feature. Use when planning large features or long-term work. Epics serve as parent containers for stories/tasks. Input: project key + summary + optional description + optional custom fields. Output: New epic key and details.",
         "userDescription": "Creates a new epic in a Jira project",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "jira_epic",
@@ -499,6 +503,10 @@
             "description": {
               "type": "string",
               "description": "Optional description for the epic"
+            },
+            "customFields": {
+              "type": "object",
+              "description": "Optional custom fields as key-value pairs. Use jira_get_custom_fields to discover available fields and jira_get_custom_field_values to get allowed values for select fields. Example: {\"customfield_10001\": {\"value\": \"High\"}, \"customfield_10002\": \"Custom text\"}"
             }
           },
           "required": [
@@ -510,7 +518,7 @@
       {
         "name": "jira_create_task",
         "displayName": "Create Jira Task",
-        "modelDescription": "Creates a task issue for general work items. Can be standalone or linked to a parent (epic/story). Use for action items, technical tasks, or non-story work. Provides flexibility in work organization. Input: project key + summary + optional description + optional parent key. Output: New task key.",
+        "modelDescription": "Creates a task issue for general work items. Can be standalone or linked to a parent (epic/story). Use for action items, technical tasks, or non-story work. Provides flexibility in work organization. Input: project key + summary + optional description + optional parent key + optional custom fields. Output: New task key.",
         "userDescription": "Creates a new task in a Jira project",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "jira_task",
@@ -532,6 +540,10 @@
             "parentKey": {
               "type": "string",
               "description": "Optional parent issue key (e.g., PROJ-123) to link the task to an epic or story"
+            },
+            "customFields": {
+              "type": "object",
+              "description": "Optional custom fields as key-value pairs. Use jira_get_custom_fields to discover available fields and jira_get_custom_field_values to get allowed values for select fields. Example: {\"customfield_10001\": {\"value\": \"High\"}, \"customfield_10002\": \"Custom text\"}"
             }
           },
           "required": [
@@ -689,7 +701,7 @@
       {
         "name": "jira_create_story",
         "displayName": "Create Jira Story",
-        "modelDescription": "Creates a user story for agile development workflows. Stories represent user-facing features or requirements. Can be linked to parent epic for organization. Use for product development and sprint planning. Input: project key + summary + optional description + optional parent epic. Output: New story key.",
+        "modelDescription": "Creates a user story for agile development workflows. Stories represent user-facing features or requirements. Can be linked to parent epic for organization. Use for product development and sprint planning. Input: project key + summary + optional description + optional parent epic + optional custom fields. Output: New story key.",
         "userDescription": "Creates a new story in a Jira project",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "jira_story",
@@ -711,6 +723,10 @@
             "parentKey": {
               "type": "string",
               "description": "Optional parent epic key (e.g., PROJ-123)"
+            },
+            "customFields": {
+              "type": "object",
+              "description": "Optional custom fields as key-value pairs. Use jira_get_custom_fields to discover available fields and jira_get_custom_field_values to get allowed values for select fields. Example: {\"customfield_10001\": {\"value\": \"High\"}, \"customfield_10002\": \"Custom text\"}"
             }
           },
           "required": [
@@ -722,7 +738,7 @@
       {
         "name": "jira_create_bug",
         "displayName": "Create Jira Bug",
-        "modelDescription": "Creates a bug/defect issue for reporting problems, errors, or unexpected behavior. Optional priority setting (Critical, High, Medium, Low). Use for defect tracking and quality management. Helps prioritize fixes. Input: project key + summary + optional description + optional priority. Output: New bug key.",
+        "modelDescription": "Creates a bug/defect issue for reporting problems, errors, or unexpected behavior. Optional priority setting (Critical, High, Medium, Low). Use for defect tracking and quality management. Helps prioritize fixes. Input: project key + summary + optional description + optional priority + optional custom fields. Output: New bug key.",
         "userDescription": "Creates a new bug in a Jira project",
         "canBeReferencedInPrompt": true,
         "toolReferenceName": "jira_bug",
@@ -744,6 +760,10 @@
             "priority": {
               "type": "string",
               "description": "Optional priority (e.g., 'Critical', 'High', 'Medium', 'Low')"
+            },
+            "customFields": {
+              "type": "object",
+              "description": "Optional custom fields as key-value pairs. Use jira_get_custom_fields to discover available fields and jira_get_custom_field_values to get allowed values for select fields. Example: {\"customfield_10001\": {\"value\": \"High\"}, \"customfield_10002\": \"Custom text\"}"
             }
           },
           "required": [

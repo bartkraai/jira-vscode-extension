@@ -5,6 +5,22 @@ All notable changes to the "42-Jira-Buddy" extension will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2026-02-16
+
+### Fixed
+- **Custom Fields in Creation Tools**: Added missing `customFields` parameter to package.json schemas
+  - All 5 creation tools now properly expose customFields parameter to Copilot
+  - `jira_create_epic` - Now shows customFields option
+  - `jira_create_story` - Now shows customFields option
+  - `jira_create_task` - Now shows customFields option
+  - `jira_create_bug` - Now shows customFields option
+  - `jira_create_subtask` - Now shows customFields option
+  - Tools had the functionality in code but Copilot couldn't see the parameter
+
+### Enhanced
+- **Tool Descriptions**: Updated modelDescription for all creation tools to mention custom fields support
+- **Parameter Guidance**: Added detailed examples in customFields description showing how to use with jira_get_custom_fields and jira_get_custom_field_values
+
 ## [0.3.2] - 2026-02-16
 
 ### Fixed
