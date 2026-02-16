@@ -5,6 +5,20 @@ All notable changes to the "42-Jira-Buddy" extension will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-02-16
+
+### Fixed
+- **Tool Visibility**: Added missing package.json declarations for custom field tools
+  - `jira_get_custom_fields` now properly appears in Copilot's tool list
+  - `jira_get_custom_field_values` now properly appears in Copilot's tool list
+  - Tools were registering at runtime but invisible to Copilot without package.json contribution
+
+### Documentation
+- **Critical Reminder Added**: Updated AGENTS.md and CLAUDE.md with comprehensive Language Model Tools section
+  - Added clear warning that tools require BOTH runtime registration AND package.json declaration
+  - Added complete checklist for creating new Copilot tools
+  - Added to Common Pitfalls section to prevent future mistakes
+
 ## [0.3.1] - 2026-02-16
 
 ### Added
