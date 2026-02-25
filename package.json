@@ -950,6 +950,72 @@
           },
           "required": ["projectKey", "issueType", "fieldName"]
         }
+      },
+      {
+        "name": "jira_update_description",
+        "displayName": "Update Jira Issue Description",
+        "modelDescription": "Updates the description field of a Jira issue. Replaces the existing description with new text. Plain text is automatically converted to Atlassian Document Format (ADF). Use when modifying, replacing, or setting the description of an issue. Input: issue key + description text. Output: Confirmation of update.",
+        "userDescription": "Updates the description of a Jira issue",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_update_desc",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "issueKey": {
+              "type": "string",
+              "description": "The Jira issue key (e.g., PROJ-123)"
+            },
+            "description": {
+              "type": "string",
+              "description": "The new description text for the issue"
+            }
+          },
+          "required": ["issueKey", "description"]
+        }
+      },
+      {
+        "name": "jira_update_summary",
+        "displayName": "Update Jira Issue Summary",
+        "modelDescription": "Updates the summary (title) of a Jira issue. Replaces the existing summary with new text. Use when renaming, correcting, or changing the title of an issue. Input: issue key + summary text. Output: Confirmation of update.",
+        "userDescription": "Updates the summary (title) of a Jira issue",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_update_summary",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "issueKey": {
+              "type": "string",
+              "description": "The Jira issue key (e.g., PROJ-123)"
+            },
+            "summary": {
+              "type": "string",
+              "description": "The new summary (title) text for the issue"
+            }
+          },
+          "required": ["issueKey", "summary"]
+        }
+      },
+      {
+        "name": "jira_update_solution",
+        "displayName": "Update Jira Issue Solution",
+        "modelDescription": "Updates the Solution custom field of a Jira issue. Replaces the existing solution text with new content. The field ID is resolved automatically by name. Use when setting, modifying, or replacing the solution or resolution details of an issue. Input: issue key + solution text. Output: Confirmation of update.",
+        "userDescription": "Updates the Solution field of a Jira issue",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "jira_update_solution",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "issueKey": {
+              "type": "string",
+              "description": "The Jira issue key (e.g., PROJ-123)"
+            },
+            "solution": {
+              "type": "string",
+              "description": "The solution text to set on the issue"
+            }
+          },
+          "required": ["issueKey", "solution"]
+        }
       }
     ]
   },

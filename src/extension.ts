@@ -38,6 +38,9 @@ import { GetTransitionsTool } from './tools/GetTransitionsTool';
 import { BulkUpdateTool } from './tools/BulkUpdateTool';
 import { GetCustomFieldsTool } from './tools/GetCustomFieldsTool';
 import { GetCustomFieldValuesTool } from './tools/GetCustomFieldValuesTool';
+import { UpdateDescriptionTool } from './tools/UpdateDescriptionTool';
+import { UpdateSummaryTool } from './tools/UpdateSummaryTool';
+import { UpdateSolutionTool } from './tools/UpdateSolutionTool';
 
 /**
  * Global extension context - accessible to all modules
@@ -281,6 +284,27 @@ export function activate(context: vscode.ExtensionContext) {
 				vscode.lm.registerTool('jira_bulk_update', bulkUpdateTool)
 			);
 			outputChannel.appendLine('Language Model Tool registered: jira_bulk_update');
+
+			// Update Description Tool
+			const updateDescriptionTool = new UpdateDescriptionTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_update_description', updateDescriptionTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_update_description');
+
+			// Update Summary Tool
+			const updateSummaryTool = new UpdateSummaryTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_update_summary', updateSummaryTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_update_summary');
+
+			// Update Solution Tool
+			const updateSolutionTool = new UpdateSolutionTool(context, authManager, cacheManager);
+			context.subscriptions.push(
+				vscode.lm.registerTool('jira_update_solution', updateSolutionTool)
+			);
+			outputChannel.appendLine('Language Model Tool registered: jira_update_solution');
 
 			// Get Custom Fields Tool
 			const getCustomFieldsTool = new GetCustomFieldsTool(context, authManager, cacheManager);

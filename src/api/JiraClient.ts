@@ -1771,6 +1771,111 @@ export class JiraClient {
    * @throws JiraAuthenticationError if authentication fails
    * @throws JiraAPIError if field validation fails
    */
+  /**
+   * Update the description of a Jira issue
+   *
+   * Converts plain text to ADF format before sending to the Jira API.
+   *
+   * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
+   * @param description - The new description text (plain text, will be converted to ADF)
+   * @param notifyUsers - Whether to notify users of the update (default: true)
+   * @returns Promise that resolves when update is complete
+   * @throws JiraNotFoundError if the issue doesn't exist
+   * @throws JiraAuthenticationError if authentication fails
+   */
+  async updateDescription(
+    issueKey: string,
+    description: string,
+    notifyUsers: boolean = true
+  ): Promise<void> {
+    const adfDescription = this.convertTextToADF(description);
+    await this.updateIssue(issueKey, { description: adfDescription }, notifyUsers);
+  }
+
+  /**
+   * Update the summary of a Jira issue
+   *
+   * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
+   * @param summary - The new summary text
+   * @param notifyUsers - Whether to notify users of the update (default: true)
+   * @returns Promise that resolves when update is complete
+   * @throws JiraNotFoundError if the issue doesn't exist
+   * @throws JiraAuthenticationError if authentication fails
+   */
+  async updateSummary(
+    issueKey: string,
+    summary: string,
+    notifyUsers: boolean = true
+  ): Promise<void> {
+    await this.updateIssue(issueKey, { summary }, notifyUsers);
+  }
+
+  /**
+   * Find a field ID by its display name
+   *
+   * Searches all fields (system and custom) for a matching name.
+   *
+   * @param fieldName - The field display name (case-insensitive)
+   * @returns The field definition including id, name, custom flag, and schema
+   * @throws JiraNotFoundError if no field matches the given name
+   */
+  async findFieldByName(fieldName: string): Promise<{
+    id: string;
+    name: string;
+    custom: boolean;
+    schema?: any;
+  }> {
+    const allFields = await this.getAllFields(true);
+    const field = allFields.find(
+      f => f.name.toLowerCase() === fieldName.toLowerCase()
+    );
+    if (!field) {
+      throw new JiraNotFoundError(
+        `Field '${fieldName}' not found. Use the get_custom_fields tool to discover available fields.`
+      );
+    }
+    return field;
+  }
+
+  /**
+   * Update a custom text field on a Jira issue by field name
+   *
+   * Looks up the field ID by name and updates it. For rich text fields
+   * (schema type 'doc'), the text is converted to ADF format automatically.
+   *
+   * @param issueKey - The Jira issue key (e.g., 'PROJ-123')
+   * @param fieldName - The field display name (case-insensitive, e.g., 'Solution')
+   * @param value - The new text value
+   * @param notifyUsers - Whether to notify users of the update (default: true)
+   * @returns The resolved field ID
+   * @throws JiraNotFoundError if the field or issue doesn't exist
+   */
+  async updateCustomTextField(
+    issueKey: string,
+    fieldName: string,
+    value: string,
+    notifyUsers: boolean = true
+  ): Promise<string> {
+    const field = await this.findFieldByName(fieldName);
+
+    // Determine if this field expects ADF (rich text) or plain text
+    const isRichText = field.schema?.type === 'doc'
+      || field.schema?.system === 'description'
+      || (field.schema?.custom && field.schema?.type === 'string' && field.schema?.customId);
+
+    // For safety, try ADF first for custom fields that might be rich text
+    // Jira will accept ADF for rich text fields; plain text for simple text fields
+    let fieldValue: any;
+    if (isRichText) {
+      fieldValue = this.convertTextToADF(value);
+    } else {
+      fieldValue = value;
+    }
+
+    await this.updateIssue(issueKey, { [field.id]: fieldValue }, notifyUsers);
+    return field.id;
+  }
+
   async updateIssue(
     issueKey: string,
     fields: Record<string, any>,
